@@ -1,1 +1,1 @@
-XXX
+./mvnw spring-boot:run
