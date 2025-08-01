@@ -3,14 +3,19 @@ package QLDV.userService.controller;
 import QLDV.userService.model.CuDan;
 import QLDV.userService.model.CanHo;
 import QLDV.userService.repository.CuDanRepository;
+import jakarta.transaction.Transactional;
 import QLDV.userService.repository.CanHoRepository;
 import QLDV.userService.dto.CuDanDTO;
-
+import QLDV.userService.dto.ThongTinCuDanDTO;
+import QLDV.userService.dto.ThongTinCuDanDTO;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.http.HttpStatus;
 
 
@@ -31,6 +36,7 @@ public class CuDanController {
     @Autowired
     private CanHoRepository canHoRepository;
 
+    // Lấy thông tin cư dân và căn hộ theo ID
     @GetMapping("/{id}")
     public ResponseEntity<?> getThongTinCuDanVaCanHo(@PathVariable Long id) {
         CuDan cuDan = cuDanRepository.findById(id).orElse(null);
@@ -68,7 +74,9 @@ public class CuDanController {
         return ResponseEntity.ok(response);
     }
 
-   @PutMapping("/api/cudan/{id}")
+    // Cập nhật thông tin cư dân
+   @PutMapping("/{id}")
+   @Transactional
     public ResponseEntity<?> updateCuDan(@PathVariable Long id, @RequestBody CuDanDTO dto) {
         Optional<CuDan> optionalCuDan = cuDanRepository.findById(id);
         if (optionalCuDan.isEmpty()) {
@@ -115,7 +123,29 @@ public class CuDanController {
         cuDanRepository.save(cuDan);
 
         return ResponseEntity.ok(Map.of("message", "Cập nhật thông tin cư dân thành công"));
+    }    
+
+    // Lấy danh sách thông tin cư dân
+    @GetMapping("/thong-tin")
+    public ResponseEntity<?> getThongTinCuDan() {
+        List<CuDan> cuDanList = cuDanRepository.findAll();
+
+        List<ThongTinCuDanDTO> dtoList = cuDanList.stream().map(cd -> {
+            String canHoStr = cd.getCanHo().getMaCanHo();
+            String email = cd.getTaiKhoan().getUsername();
+            String trangThai = cd.getTaiKhoan().getStatus();
+            return new ThongTinCuDanDTO(
+                    cd.getId(),
+                    cd.getHoTen(),
+                    canHoStr,
+                    email,
+                    cd.getSoDienThoai(),
+                    trangThai,
+                    cd.getTaiKhoan().getNgayDangKy()
+            );
+        }).toList();
+
+        return ResponseEntity.ok(dtoList);  // Trả về JSON như cũ, nhưng bao trong ResponseEntity
     }
 
-    
 }
