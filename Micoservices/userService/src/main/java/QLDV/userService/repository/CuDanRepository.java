@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CuDanRepository extends JpaRepository<CuDan, Long> {
     // tự động có phương thức findById(id)
+    boolean existsByCccd(String cccd);
 }
