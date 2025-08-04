@@ -15,7 +15,9 @@ public class CuDan {
 
     private String email;
     private String soDienThoai;
-    private String CCCD;
+
+    @Column(name = "CCCD", unique = true, nullable = false)
+    private String cccd;
 
     @Temporal(TemporalType.DATE)
     private Date ngaySinh;
@@ -57,8 +59,8 @@ public class CuDan {
     public Date getNgaySinh() { return ngaySinh; }
     public void setNgaySinh(Date ngaySinh) { this.ngaySinh = ngaySinh; }
 
-    public String getCCCD() { return CCCD; }
-    public void setCCCD(String CCCD) { this.CCCD = CCCD; }
+    public String getCCCD() { return cccd; }
+    public void setCCCD(String cccd) { this.cccd = cccd; }
 
     public String getDiaChi() { return diaChi; }
     public void setDiaChi(String diaChi) { this.diaChi = diaChi; }

@@ -48,11 +48,23 @@ public class DangKyController {
         CanHo canHo = canHoRepository.findById(req.getCanHoId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy căn hộ"));
 
+        if (cuDanRepository.existsByCccd(req.getCccd())) {
+            return ResponseEntity.badRequest().body("CCCD đã được đăng ký.");
+        }
+
+        // Kiểm tra định dạng email
+        if (req.getEmail() == null || !req.getEmail().matches("^[A-Za-z0-9._%+-]+@gmail\\.com$")) {
+            return ResponseEntity.badRequest().body("Email không hợp lệ. Chỉ chấp nhận địa chỉ @gmail.com");
+        }
+
+
         // Tạo cư dân
         CuDan cd = new CuDan();
         cd.setTaiKhoan(taiKhoanSaved);
         cd.setHoTen(req.getHoTen());
         cd.setEmail(req.getEmail());
+        cd.setCCCD(req.getCccd());          // ← thêm dòng này
+        cd.setDiaChi(req.getDiaChi());      // ← và dòng này
         cd.setSoDienThoai(req.getSoDienThoai());
         cd.setNgaySinh(Date.from(req.getNgaySinh().atStartOfDay(ZoneId.systemDefault()).toInstant()));
         cd.setTrangThai(CuDan.TrangThaiCuDan.ở);  // ← enum cần viết hoa nếu đúng theo định nghĩa

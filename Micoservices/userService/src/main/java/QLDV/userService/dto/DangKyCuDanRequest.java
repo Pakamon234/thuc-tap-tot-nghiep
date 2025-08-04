@@ -10,6 +10,9 @@ public class DangKyCuDanRequest {
     private String hoTen;
     private String email;
     private String soDienThoai;
-    private String canHoId;
     private LocalDate ngaySinh;
+    private String cccd;           // ← thêm
+    private String diaChi;         // ← thêm
+    private String canHoId;
 }
+
