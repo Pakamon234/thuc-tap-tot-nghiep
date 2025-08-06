@@ -1,6 +1,7 @@
 package QLDV.addendumService.model;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +13,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
 
 @Entity
 @Table(name = "phulucdichvu")
@@ -44,6 +47,16 @@ public class PhuLucDichVu {
     @Column(name = "trangthai", nullable = false)
     private TrangThai trangThai;
 
+    @Column(name = "ngaybatdau", nullable = false)
+    @Temporal(TemporalType.DATE)
+    private Date ngayBatDau;
+
+    @Column(name = "ngayketthuc", nullable = false)
+    @Temporal(TemporalType.DATE)
+    private Date ngayKetThuc;
+
+    @Column(name = "thongtinthem", columnDefinition = "TEXT")
+    private String thongTinThem;
     // Getters and Setters
 
     public int getId() {
@@ -105,5 +118,29 @@ public class PhuLucDichVu {
     // Enum for trangThai
     public enum TrangThai {
         HoatDong, NgungHoatDong
+    }
+
+    public Date getNgayBatDau() {
+        return ngayBatDau;
+    }
+
+    public void setNgayBatDau(Date ngayBatDau) {
+        this.ngayBatDau = ngayBatDau;
+    }
+
+    public Date getNgayKetThuc() {
+        return ngayKetThuc;
+    }
+
+    public void setNgayKetThuc(Date ngayKetThuc) {
+        this.ngayKetThuc = ngayKetThuc;
+    }
+
+    public String getThongTinThem() {
+        return thongTinThem;
+    }
+
+    public void setThongTinThem(String thongTinThem) {
+        this.thongTinThem = thongTinThem;
     }
 }

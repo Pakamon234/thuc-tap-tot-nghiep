@@ -1,19 +1,61 @@
 package QLDV.addendumService.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import QLDV.addendumService.model.DichVu;
+import QLDV.addendumService.repository.CauHinhDichVuRepository;
 import QLDV.addendumService.repository.DichVuRepository;
+import QLDV.addendumService.repository.GoiCuocDichVuRepository;
+import QLDV.addendumService.repository.MauHopDongDichVuRepository;
+import QLDV.addendumService.repository.PhuLucDichVuRepository;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
+// @RestController
+// @RequestMapping("/api/dichvu")
+// public class DichVuController {
+
+//     @Autowired
+//     private DichVuRepository dichVuRepository;
+
+//     // Lấy tất cả dịch vụ
+//     @GetMapping
+//     public List<DichVu> getAllDichVu() {
+//         return dichVuRepository.findAll();
+//     }
+
+//     // Lấy dịch vụ theo mã
+//     @GetMapping("/{maDichVu}")
+//     public DichVu getDichVuByMaDichVu(@PathVariable String maDichVu) {
+//         return dichVuRepository.findById(maDichVu).orElse(null);
+//     }
+
+//     // Thêm dịch vụ mới
+//     @PostMapping
+//     public DichVu addDichVu(@RequestBody DichVu dichVu) {
+//         return dichVuRepository.save(dichVu);
+//     }
+// }
 @RestController
 @RequestMapping("/api/dichvu")
 public class DichVuController {
 
     @Autowired
     private DichVuRepository dichVuRepository;
+    @Autowired
+    private PhuLucDichVuRepository phuLucDichVuRepository;
+    @Autowired
+    private MauHopDongDichVuRepository mauHopDongDichVuRepository;
+    @Autowired
+    private GoiCuocDichVuRepository goiCuocDichVuRepository;
+    @Autowired
+    private CauHinhDichVuRepository cauHinhDichVuRepository;
+
 
     // Lấy tất cả dịch vụ
     @GetMapping
@@ -23,13 +65,107 @@ public class DichVuController {
 
     // Lấy dịch vụ theo mã
     @GetMapping("/{maDichVu}")
-    public DichVu getDichVuByMaDichVu(@PathVariable String maDichVu) {
-        return dichVuRepository.findById(maDichVu).orElse(null);
+    public ResponseEntity<?> getDichVuByMaDichVu(@PathVariable String maDichVu) {
+        Optional<DichVu> optional = dichVuRepository.findById(maDichVu);
+        if (optional.isPresent()) {
+            return ResponseEntity.ok(optional.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Dịch vụ không tồn tại");
+        }
     }
 
-    // Thêm dịch vụ mới
+    // Thêm dịch vụ mới (check trùng mã và các trường bắt buộc)
     @PostMapping
-    public DichVu addDichVu(@RequestBody DichVu dichVu) {
-        return dichVuRepository.save(dichVu);
+    public ResponseEntity<?> addDichVu(@RequestBody DichVu dichVu) {
+        if (dichVu.getMaDichVu() == null || dichVu.getMaDichVu().isBlank()) {
+            return ResponseEntity.badRequest().body("Mã dịch vụ không được để trống");
+        }
+        if (dichVuRepository.existsById(dichVu.getMaDichVu())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Mã dịch vụ đã tồn tại");
+        }
+        if (dichVu.getTenDichVu() == null || dichVu.getTenDichVu().isBlank()) {
+            return ResponseEntity.badRequest().body("Tên dịch vụ là bắt buộc");
+        }
+        if (dichVu.getLoaiTinhPhi() == null) {
+            return ResponseEntity.badRequest().body("Loại tính phí là bắt buộc");
+        }
+        if (dichVu.getTrangThai() == null) {
+            return ResponseEntity.badRequest().body("Trạng thái là bắt buộc");
+        }
+
+        DichVu saved = dichVuRepository.save(dichVu);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
+
+    @PutMapping("/{maDichVu}")
+public ResponseEntity<?> updateDichVu(
+        @PathVariable String maDichVu,
+        @RequestBody DichVu updatedDichVu,
+        @RequestParam(name = "override", defaultValue = "false") boolean override
+) {
+    return dichVuRepository.findById(maDichVu).map(existing -> {
+        if (updatedDichVu.getTenDichVu() == null || updatedDichVu.getTenDichVu().isBlank()) {
+            return ResponseEntity.badRequest().body("Tên dịch vụ là bắt buộc");
+        }
+        if (updatedDichVu.getLoaiTinhPhi() == null) {
+            return ResponseEntity.badRequest().body("Loại tính phí là bắt buộc");
+        }
+        if (updatedDichVu.getTrangThai() == null) {
+            return ResponseEntity.badRequest().body("Trạng thái là bắt buộc");
+        }
+
+        boolean isChangingTrangThai = !updatedDichVu.getTrangThai().equals(existing.getTrangThai());
+        if (isChangingTrangThai) {
+            boolean hasActivePhuLuc = phuLucDichVuRepository
+                    .existsByDichVu_MaDichVuAndNgayKetThucAfter(maDichVu, new Date());
+
+            if (hasActivePhuLuc && !override) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("⚠ Dịch vụ còn phụ lục đang hiệu lực. Bạn không có quyền thay đổi trạng thái. Hãy xác nhận override nếu bạn là quản trị viên.");
+            }
+        }
+
+        // Cho cập nhật toàn bộ
+        existing.setTenDichVu(updatedDichVu.getTenDichVu());
+        existing.setDonViTinh(updatedDichVu.getDonViTinh());
+        existing.setMoTa(updatedDichVu.getMoTa());
+        existing.setLoaiTinhPhi(updatedDichVu.getLoaiTinhPhi());
+        existing.setBatBuoc(updatedDichVu.isBatBuoc());
+        existing.setTrangThai(updatedDichVu.getTrangThai());
+
+        return ResponseEntity.ok(dichVuRepository.save(existing));
+    }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy dịch vụ cần cập nhật"));
+}
+
+
+    // Xóa dịch vụ (chỉ khi không bắt buộc)
+    @DeleteMapping("/{maDichVu}")
+    public ResponseEntity<?> deleteDichVu(@PathVariable String maDichVu) {
+        Optional<DichVu> optional = dichVuRepository.findById(maDichVu);
+
+        if (optional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Dịch vụ không tồn tại");
+        }
+
+        DichVu dichVu = optional.get();
+
+        if (dichVu.isBatBuoc()) {
+            return ResponseEntity.badRequest().body("Không thể xoá dịch vụ bắt buộc");
+        }
+
+        // Kiểm tra tồn tại khóa ngoại
+        boolean isReferenced = phuLucDichVuRepository.existsByDichVu_MaDichVu(maDichVu) ||
+                cauHinhDichVuRepository.existsByDichVu_MaDichVu(maDichVu) ||
+                goiCuocDichVuRepository.existsByDichVu_MaDichVu(maDichVu) ||
+                mauHopDongDichVuRepository.existsById_MaDichVu(maDichVu);
+
+        if (isReferenced) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Không thể xoá dịch vụ vì đang được liên kết sử dụng");
+        }
+
+        dichVuRepository.deleteById(maDichVu);
+        return ResponseEntity.ok("Xoá dịch vụ thành công");
+    }
+
 }

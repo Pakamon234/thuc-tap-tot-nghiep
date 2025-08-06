@@ -10,4 +10,8 @@ import QLDV.addendumService.util.MauHopDongDichVuId;
 
 
 public interface MauHopDongDichVuRepository extends JpaRepository<MauHopDongDichVu, MauHopDongDichVuId> {
+
+    boolean existsById_MauId(int id);
+
+    boolean existsById_MaDichVu(String maDichVu);
 }
