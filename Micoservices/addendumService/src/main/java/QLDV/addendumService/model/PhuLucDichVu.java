@@ -117,7 +117,7 @@ public class PhuLucDichVu {
 
     // Enum for trangThai
     public enum TrangThai {
-        HoatDong, NgungHoatDong
+        ChoDuyet,HoatDong, NgungHoatDong
     }
 
     public Date getNgayBatDau() {

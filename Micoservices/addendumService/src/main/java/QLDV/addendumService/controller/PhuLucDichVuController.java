@@ -139,7 +139,7 @@ public class PhuLucDichVuController {
     @GetMapping("/saphethan/{maHopDong}")
     public ResponseEntity<?> getPhuLucSapHetHan(@PathVariable String maHopDong) {
         LocalDate todayLocal = LocalDate.now();
-        LocalDate soonLocal = todayLocal.plusDays(3);
+        LocalDate soonLocal = todayLocal.plusDays(30);
 
         Date today = Date.from(todayLocal.atStartOfDay(ZoneId.systemDefault()).toInstant());
         Date soon = Date.from(soonLocal.atStartOfDay(ZoneId.systemDefault()).toInstant());

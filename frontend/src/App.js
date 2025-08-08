@@ -1,47 +1,21 @@
-import { useEffect, useState } from "react";
-import './App.css';
-
-
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Layout from './components/Layout';
 function App() {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetch("http://localhost:8080/api/dichvu", {
-      method: "GET",
-      credentials: "include", // test allowCredentials (cookie / JWT)
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP error: ${res.status}`);
-        }
-        return res.json(); // hoặc .text() nếu API không trả JSON
-      })
-      .then((data) => setData(data))
-      .catch((err) => setError(err.message));
-  }, []);
-
   return (
-    <div className="App">
-      <header className="App-header">
-        <h2>CORS Test</h2>
-        <div className="text-red-500 font-bold text-center p-4">
-  Tailwind hoạt động rồi!
-</div>
-<div className="bg-green-500 text-white text-xl p-6 rounded-lg">
-  Nếu Tailwind hoạt động thì khung này có nền xanh lá và chữ trắng!
-</div>
-
-
-        {data ? (
-          <pre>{JSON.stringify(data, null, 2)}</pre>
-        ) : error ? (
-          <p style={{ color: 'red' }}>Lỗi: {error}</p>
-        ) : (
-          <p>Đang tải dữ liệu...</p>
-        )}
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          {/* Thêm route con tại đây */}
+          {/* <Route path="/residents" element={<Residents />} /> */}
+        </Route>
+        <Route path="/" element={<Login />} /> {/* Mặc định chuyển đến trang login */}
+      </Routes>
+    </Router>
   );
 }
 
