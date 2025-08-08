@@ -74,4 +74,9 @@ public class DangKyController {
 
         return ResponseEntity.ok("Đăng ký thành công. Vui lòng chờ duyệt.");
     }
+
+    @GetMapping("/canho")
+    public ResponseEntity<?> getAllCanHo() {
+        return ResponseEntity.ok(canHoRepository.findAll());
+    }
 }
