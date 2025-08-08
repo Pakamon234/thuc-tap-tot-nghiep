@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
+import DangKyForm from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Layout from './components/Layout';
 function App() {
@@ -8,6 +9,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<DangKyForm />} />
+        {/* Thêm các route khác tại đây */}
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           {/* Thêm route con tại đây */}
