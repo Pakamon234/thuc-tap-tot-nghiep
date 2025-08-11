@@ -1,0 +1,648 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  X, 
+  Save, 
+  Plus, 
+  Minus, 
+  HelpCircle, 
+  FileText, 
+  Calendar,
+  DollarSign,
+  Building,
+  AlertTriangle,
+  Trash2
+} from 'lucide-react';
+import contractsService from '../services/contractsService';
+import {getUserProfile} from '../services/userService';
+// import AddServicesModal from './AddServicesModal';
+// import ServiceDetailsModal from './ServiceDetailsModal';
+import Loading from './Loading';
+import { ErrorFallback } from './ErrorBoundary';
+import { cn } from '../lib/utils';
+
+/**
+ * @typedef {Object} Contract
+ * @property {string} id
+ * @property {string} maHopDong
+ * @property {string} maCanHo
+ * @property {string} ngayHieuLuc
+ * @property {string} ngayHetHan
+ * @property {string} dienKhoan
+ * @property {{serviceId: string, serviceType: string}[]} services
+ */
+
+/**
+ * @typedef {Object} Service
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {number} price
+ * @property {string} unit
+ * @property {"required" | "optional"} type
+ */
+
+/**
+ * @typedef {Object} CreateContractData
+ * @property {string} maCanHo
+ * @property {string} ngayHieuLuc
+ * @property {string} ngayHetHan
+ * @property {string} dienKhoan
+ * @property {string[]} additionalServices
+ */
+
+/**
+ * @typedef {Object} UpdateContractData
+ * @property {string[]} [addServices]
+ * @property {string[]} [removeServices]
+ */
+
+/**
+ * @typedef {Object} ContractModalProps
+ * @property {boolean} isOpen
+ * @property {() => void} onClose
+ * @property {() => void} onSaved
+ * @property {Contract | null} [contract]
+ * @property {"create" | "edit" | "view"} mode
+ */
+
+/**
+ * @typedef {Object} FormData
+ * @property {string} maCanHo
+ * @property {string} ngayHieuLuc
+ * @property {string} ngayHetHan
+ * @property {string} dienKhoan
+ */
+
+/**
+ * Hàm xử lý lỗi API
+ * @param {any} error 
+ * @returns {string}
+ */
+function handleApiError(error) {
+  if (error.response?.data?.message) return error.response.data.message;
+  if (error.message) return error.message;
+  return 'Có lỗi xảy ra khi gọi API';
+}
+
+/**
+ * @param {ContractModalProps} props
+ */
+const ContractModal = ({
+  isOpen,
+  onClose,
+  onSaved,
+  contract,
+  mode
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [availableServices, setAvailableServices] = useState(/** @type {Service[]} */([]));
+  const [formData, setFormData] = useState(/** @type {FormData} */({
+    maCanHo: '',
+    ngayHieuLuc: '',
+    ngayHetHan: '',
+    dienKhoan: ''
+  }));
+  const [selectedOptionalServices, setSelectedOptionalServices] = useState(new Set());
+  const [isAddServicesModalOpen, setIsAddServicesModalOpen] = useState(false);
+  const [selectedServiceForDetails, setSelectedServiceForDetails] = useState(/** @type {Service | null} */(null));
+  const [isServiceDetailsOpen, setIsServiceDetailsOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState(/** @type {Partial<FormData>} */({}));
+  const [contractTemplate, setContractTemplate] = useState(null);
+
+  const isEditMode = mode === 'edit';
+  const isViewMode = mode === 'view';
+  const isCreateMode = mode === 'create';
+
+  const userID = Number(localStorage.getItem('userId'));
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (isCreateMode) {
+      loadForCreateMode();
+    } else if (isEditMode) {
+      loadForEditMode();
+    }
+  }, [isOpen, mode, contract]);
+
+
+const loadForCreateMode = async () => {
+  setIsLoading(true);
+  try {
+    // Gọi song song cả 2 API
+    const [templateRes, userRes] = await Promise.all([
+      contractsService.getLatestContractTemplateWithServices(),
+      getUserProfile(userID) // userID là id cư dân hiện tại
+    ]);
+
+    // Lưu mẫu hợp đồng để hiển thị
+    setContractTemplate(templateRes.mauHopDong);
+
+    // Lọc & map dịch vụ (loại bỏ dịch vụ NgungHoatDong)
+    const mappedServices = templateRes.danhSachDichVu
+    .filter(dv => dv.trangThai !== 'NgungHoatDong')
+    .map(dv => ({
+      id: dv.maDichVu,
+      name: dv.tenDichVu,
+      description: dv.moTa,
+      unit: dv.donViTinh,
+      loaiTinhPhi: dv.loaiTinhPhi, // thêm ở đây
+      price: 0,
+      type: dv.batBuoc ? 'required' : 'optional'
+    }));
+
+    setAvailableServices(mappedServices);
+
+    // Set form
+    setFormData({
+      maCanHo: userRes.data.canHo?.maCanHo || '',
+      ngayHieuLuc: new Date().toISOString().slice(0, 10),
+      ngayHetHan: '',
+      dienKhoan: templateRes.mauHopDong?.dieuKhoanChinh || ''
+    });
+
+    setSelectedOptionalServices(new Set());
+    setValidationErrors({});
+    setError(null);
+  } catch (err) {
+    setError(handleApiError(err));
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const mauHopDongId = contract?.mauHopDongId || null;
+const maHopDong = contract?.maHopDong || null;
+
+const loadForEditMode = async () => {
+    if (!contract) return;
+    setIsLoading(true);
+    console.log('mau hop dong: ', mauHopDongId, 'type: ', typeof mauHopDongId);
+    console.log('ma hop dong: ', maHopDong, 'type: ', typeof maHopDong);
+    try {
+      const res = await contractsService.getAvailableContract(mauHopDongId, maHopDong);
+
+      setContractTemplate(res.mauHopDong);
+
+      const mappedServices = [
+        ...res.dichVuBatBuoc.map(dv => ({
+          id: dv.maDichVu,
+          name: dv.tenDichVu,
+          description: dv.moTa,
+          unit: dv.donViTinh,
+          price: 0,
+          type: 'required',
+          loaiTinhPhi: dv.loaiTinhPhi
+        })),
+        ...res.dichVuThuyChon.map(dv => ({
+          id: dv.maDichVu,
+          name: dv.tenDichVu,
+          description: dv.moTa,
+          unit: dv.donViTinh,
+          price: 0,
+          type: 'optional',
+          loaiTinhPhi: dv.loaiTinhPhi
+        }))
+      ].filter(dv => dv.trangThai !== 'NgungHoatDong');
+      setAvailableServices(mappedServices);
+
+      setFormData({
+        maCanHo: contract.maCanHo || '',
+        ngayHieuLuc: contract.ngayHieuLuc?.slice(0, 10) || '',
+        ngayHetHan: contract.ngayHetHan?.slice(0, 10) || '',
+        dienKhoan: res.mauHopDong?.dieuKhoanChinh || ''
+      });
+
+      setSelectedOptionalServices(new Set(res.dichVuThuyChon.map(dv => dv.maDichVu)));
+    } catch (err) {
+      setError(handleApiError(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  const validateForm = () => {
+    /** @type {Partial<FormData>} */
+    const errors = {};
+
+    if (!formData.maCanHo.trim()) {
+      errors.maCanHo = 'Mã căn hộ không được để trống';
+    }
+    if (!formData.ngayHieuLuc) {
+      errors.ngayHieuLuc = 'Ngày hiệu lực không được để trống';
+    } else if (isCreateMode && new Date(formData.ngayHieuLuc) <= new Date()) {
+      errors.ngayHieuLuc = 'Ngày hiệu lực phải sau ngày hôm nay';
+    }
+    if (!formData.ngayHetHan) {
+      errors.ngayHetHan = 'Ngày hết hạn không được để trống';
+    } else if (new Date(formData.ngayHetHan) <= new Date(formData.ngayHieuLuc)) {
+      errors.ngayHetHan = 'Ngày hết hạn phải sau ngày hiệu lực';
+    }
+    if (!formData.dienKhoan.trim()) {
+      errors.dienKhoan = 'Điều khoản không được để trống';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      if (isCreateMode) {
+        /** @type {CreateContractData} */
+        const createData = {
+          maCanHo: formData.maCanHo,
+          ngayHieuLuc: formData.ngayHieuLuc,
+          ngayHetHan: formData.ngayHetHan,
+          dienKhoan: formData.dienKhoan,
+          additionalServices: Array.from(selectedOptionalServices)
+        };
+        await contractsService.createContract(createData);
+        alert('Đã gửi yêu cầu, vui lòng chờ duyệt!');
+      } else if (isEditMode && contract) {
+        const currentOptionalServices = new Set(
+          contract.services
+            .filter(s => s.serviceType === 'optional')
+            .map(s => s.serviceId)
+        );
+
+        const servicesToAdd = Array.from(selectedOptionalServices).filter(
+          id => !currentOptionalServices.has(id)
+        );
+        const servicesToRemove = Array.from(currentOptionalServices).filter(
+          id => !selectedOptionalServices.has(id)
+        );
+
+        if (servicesToAdd.length > 0 || servicesToRemove.length > 0) {
+          /** @type {UpdateContractData} */
+          const updateData = {};
+          if (servicesToAdd.length > 0) updateData.addServices = servicesToAdd;
+          if (servicesToRemove.length > 0) updateData.removeServices = servicesToRemove;
+
+          await contractsService.updateContract(contract.id, updateData);
+          alert('Đã gửi yêu cầu, vui lòng chờ duyệt!');
+        }
+      }
+      onSaved();
+    } catch (err) {
+      setError(handleApiError(err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddServices = (serviceIds) => {
+    const newSelected = new Set(selectedOptionalServices);
+    serviceIds.forEach(id => newSelected.add(id));
+    setSelectedOptionalServices(newSelected);
+  };
+
+  const handleRemoveService = (serviceId) => {
+    if (window.confirm('Bạn có chắc chắn muốn hủy dịch vụ này không? Việc hủy sẽ có hiệu lực từ kỳ thanh toán tiếp theo.')) {
+      const newSelected = new Set(selectedOptionalServices);
+      newSelected.delete(serviceId);
+      setSelectedOptionalServices(newSelected);
+    }
+  };
+
+  const handleViewServiceDetails = (serviceId) => {
+    const service = availableServices.find(s => s.id === serviceId);
+    if (service) {
+      setSelectedServiceForDetails(service);
+      setIsServiceDetailsOpen(true);
+    }
+  };
+
+  const getRequiredServices = () => availableServices.filter(s => s.type === 'required');
+  const getSelectedOptionalServices = () => Array.from(selectedOptionalServices)
+    .map(id => availableServices.find(s => s.id === id))
+    .filter(Boolean);
+  const calculateTotalValue = () => {
+    const requiredTotal = getRequiredServices().reduce((sum, service) => sum + service.price, 0);
+    const optionalTotal = getSelectedOptionalServices().reduce((sum, service) => sum + service.price, 0);
+    return requiredTotal + optionalTotal;
+  };
+  const getCurrentOptionalServiceIds = () => contract
+    ? contract.services.filter(s => s.serviceType === 'optional').map(s => s.serviceId)
+    : [];
+
+  if (!isOpen) return null;
+
+  return (
+    
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {isCreateMode && 'Tạo hợp đồng mới'}
+                {isEditMode && 'Chỉnh sửa hợp đồng'}
+                {isViewMode && 'Chi tiết hợp đồng'}
+              </h2>
+              <p className="text-gray-600 mt-1">
+                {isCreateMode && 'Điền thông tin để tạo hợp đồng dịch vụ mới'}
+                {isEditMode && 'Chỉnh sửa các dịch vụ trong hợp đồng hiện tại'}
+                {isViewMode && 'Xem thông tin chi tiết hợp đồng'}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 p-1 rounded"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {isLoading ? (
+            <div className="py-8">
+              <Loading text="Đang tải thông tin..." />
+            </div>
+          ) : error ? (
+            <ErrorFallback 
+              error={error} 
+              onRetry={isCreateMode ? loadForCreateMode : loadForEditMode}
+              message="Không thể tải thông tin dịch vụ"
+            />
+          ) : (
+            <div className="space-y-6">
+              {/* Contract Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Thông tin chung
+                </h3>
+
+                {(isCreateMode || isEditMode) ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Tên mẫu hợp đồng + mô tả */}
+                    {contractTemplate && (
+                      <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="text-lg font-semibold text-blue-800">
+                          {contractTemplate.tenMau}
+                        </h4>
+                        <p className="text-gray-700">{contractTemplate.moTa}</p>
+                      </div>
+                    )}
+
+                    {/* Mã căn hộ */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mã căn hộ *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.maCanHo}
+                        disabled
+                        className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-700"
+                      />
+                    </div>
+
+                    {/* Ngày hiệu lực */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ngày hiệu lực *
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.ngayHieuLuc}
+                        onChange={(e) => handleInputChange('ngayHieuLuc', e.target.value)}
+                        className={cn(
+                          'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary',
+                          validationErrors.ngayHieuLuc ? 'border-red-500' : 'border-gray-300'
+                        )}
+                        disabled={isViewMode}
+                      />
+                      {validationErrors.ngayHieuLuc && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {validationErrors.ngayHieuLuc}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Ngày hết hạn (chỉ edit/view) */}
+                    {isEditMode && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Ngày hết hạn
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.ngayHetHan}
+                          onChange={(e) => handleInputChange('ngayHetHan', e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg"
+                          disabled={isViewMode}
+                        />
+                      </div>
+                    )}
+
+                    {/* Điều khoản chung */}
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Điều khoản chung *
+                      </label>
+                      <textarea
+                        value={formData.dienKhoan}
+                        onChange={(e) => handleInputChange('dienKhoan', e.target.value)}
+                        rows={4}
+                        className={cn(
+                          'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary',
+                          validationErrors.dienKhoan ? 'border-red-500' : 'border-gray-300'
+                        )}
+                        placeholder="Nhập điều khoản chung của hợp đồng"
+                        disabled={isViewMode}
+                      />
+                      {validationErrors.dienKhoan && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {validationErrors.dienKhoan}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // View mode giữ nguyên
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* View mode fields */}
+                  </div>
+                )}
+              </div>
+
+              {/* Services Section */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">Dịch vụ đính kèm</h3>
+
+                {/* Required Services */}
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-800 mb-3 flex items-center">
+                    <AlertTriangle className="h-4 w-4 text-red-500 mr-2" />
+                    Dịch vụ bắt buộc
+                  </h4>
+                  <div className="space-y-3">
+                    {availableServices
+                      .filter(sv => sv.type === 'required')
+                      .map((service) => (
+                        <div key={service.id} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                          <div>
+                            <h5 className="font-medium text-gray-900">{service.name}</h5>
+                            <p className="text-sm text-gray-600">{service.description}</p>
+                            <p className="text-sm font-medium text-gray-900 mt-1">
+                              Tính phí theo: {
+                                service.loaiTinhPhi === 'GoiCuoc' ? 'Gói Cước' :
+                                service.loaiTinhPhi === 'TheoChiSo' ? 'Theo chỉ số' :
+                                service.loaiTinhPhi === 'CoDinh' ? 'Cố định' :
+                                service.loaiTinhPhi
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Optional Services */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-800 flex items-center">
+                      <Plus className="h-4 w-4 text-blue-500 mr-2" />
+                      Dịch vụ tùy chọn
+                    </h4>
+                    {!isViewMode && (
+                      <button
+                        onClick={() => setIsAddServicesModalOpen(true)}
+                        className="bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary-600 transition-colors text-sm flex items-center"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Thêm dịch vụ
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {getSelectedOptionalServices().map((service) => (
+                      <div key={service.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h5 className="font-medium text-gray-900">{service.name}</h5>
+                            <p className="text-sm text-gray-600">{service.description}</p>                            
+                            <p className="text-sm font-medium text-gray-900 mt-1">
+                              Tính phí theo: {
+                                service.loaiTinhPhi === 'GoiCuoc' ? 'Gói Cước' :
+                                service.loaiTinhPhi === 'TheoChiSo' ? 'Theo chỉ số' :
+                                service.loaiTinhPhi === 'CoDinh' ? 'Cố định' :
+                                service.loaiTinhPhi
+                              }
+                            </p>
+
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleViewServiceDetails(service.id)}
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                              title="Xem chi tiết điều khoản"
+                            >
+                              <HelpCircle className="h-4 w-4" />
+                            </button>
+                            {(isEditMode || isCreateMode) && (
+                              <button
+                                onClick={() => handleRemoveService(service.id)}
+                                className="text-red-600 hover:text-red-800 p-1 rounded"
+                                title="Hủy dịch vụ"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {selectedOptionalServices.size === 0 && (
+                      <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
+                        <Plus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500">Chưa chọn dịch vụ tùy chọn nào</p>
+                        {!isViewMode && (
+                          <button
+                            onClick={() => setIsAddServicesModalOpen(true)}
+                            className="text-primary hover:text-primary-600 mt-2"
+                          >
+                            Thêm dịch vụ →
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Value */}
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-900">Tổng giá trị hợp đồng:</span>
+                  <div className="flex items-center">
+                    <DollarSign className="h-5 w-5 text-primary mr-1" />
+                    <span className="text-xl font-bold text-primary">
+                      {calculateTotalValue().toLocaleString('vi-VN')} VND
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-6 border-t">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  {isViewMode ? 'Đóng' : 'Hủy'}
+                </button>
+                {!isViewMode && (
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 flex items-center"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loading size="sm" text="" className="mr-2" />
+                        Đang lưu...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        {isCreateMode ? 'Tạo hợp đồng' : 'Lưu thay đổi'}
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      
+  );
+};
+
+export default ContractModal;

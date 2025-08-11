@@ -1,5 +1,6 @@
 package QLDV.addendumService.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +15,6 @@ public interface MauHopDongDichVuRepository extends JpaRepository<MauHopDongDich
     boolean existsById_MauId(int id);
 
     boolean existsById_MaDichVu(String maDichVu);
+
+    List<MauHopDongDichVu> findById_MauId(int mauId);
 }

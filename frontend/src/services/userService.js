@@ -21,3 +21,15 @@ export const getAllCanHo = () => {
 export const dangKyCuDan  = (dangKyRequest) => {
   return axios.post(`${API_BASE_URL}/dangky`, dangKyRequest);
 };
+
+// ================== API Hồ sơ cá nhân ==================
+
+// Lấy thông tin cá nhân của cư dân
+export const getUserProfile = (id) => {
+  return axios.get(`${API_BASE_URL}/cudan/${id}`);
+};
+
+// Cập nhật thông tin cá nhân của cư dân
+export const updateUserProfile = (id, profileData) => {
+  return axios.put(`${API_BASE_URL}/cudan/${id}`, profileData);
+};

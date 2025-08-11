@@ -16,3 +16,10 @@ code {
     monospace;
 
 }
+
+html,
+:host {
+  -webkit-text-size-adjust: auto !important; 
+  text-size-adjust: 100% !important;
+}
+

@@ -1,0 +1,353 @@
+return (
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {isCreateMode && 'Tạo hợp đồng mới'}
+                {isEditMode && 'Chỉnh sửa hợp đồng'}
+                {isViewMode && 'Chi tiết hợp đồng'}
+              </h2>
+              <p className="text-gray-600 mt-1">
+                {isCreateMode && 'Điền thông tin để tạo hợp đồng dịch vụ mới'}
+                {isEditMode && 'Chỉnh sửa các dịch vụ trong hợp đồng hiện tại'}
+                {isViewMode && 'Xem thông tin chi tiết hợp đồng'}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 p-1 rounded"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {isLoading ? (
+            <div className="py-8">
+              <Loading text="Đang tải thông tin..." />
+            </div>
+          ) : error ? (
+            <ErrorFallback 
+              error={error} 
+              onRetry={isCreateMode ? loadForCreateMode : loadForEditMode}
+              message="Không thể tải thông tin dịch vụ"
+            />
+          ) : (
+            <div className="space-y-6">
+              {/* Contract Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Thông tin chung
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Apartment Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mã căn hộ *
+                    </label>
+                    {isViewMode || isEditMode ? (
+                      <div className="flex items-center bg-gray-100 px-3 py-2 rounded-lg">
+                        <Building className="h-4 w-4 text-gray-500 mr-2" />
+                        <span className="text-gray-900">{formData.maCanHo}</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="text"
+                          value={formData.maCanHo}
+                          onChange={(e) => handleInputChange('maCanHo', e.target.value)}
+                          className={cn(
+                            'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary',
+                            validationErrors.maCanHo ? 'border-red-500' : 'border-gray-300'
+                          )}
+                          placeholder="VD: A101, B205"
+                        />
+                        {validationErrors.maCanHo && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.maCanHo}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contract Number (view mode only) */}
+                  {contract && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mã hợp đồng
+                      </label>
+                      <div className="flex items-center bg-gray-100 px-3 py-2 rounded-lg">
+                        <FileText className="h-4 w-4 text-gray-500 mr-2" />
+                        <span className="text-gray-900">{contract.maHopDong}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Effective Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Ngày hiệu lực *
+                    </label>
+                    {isViewMode || (isEditMode && contract) ? (
+                      <div className="flex items-center bg-gray-100 px-3 py-2 rounded-lg">
+                        <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+                        <span className="text-gray-900">
+                          {new Date(formData.ngayHieuLuc).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="date"
+                          value={formData.ngayHieuLuc}
+                          onChange={(e) => handleInputChange('ngayHieuLuc', e.target.value)}
+                          className={cn(
+                            'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary',
+                            validationErrors.ngayHieuLuc ? 'border-red-500' : 'border-gray-300'
+                          )}
+                        />
+                        {validationErrors.ngayHieuLuc && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.ngayHieuLuc}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expiry Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Ngày hết hạn *
+                    </label>
+                    {isViewMode || (isEditMode && contract) ? (
+                      <div className="flex items-center bg-gray-100 px-3 py-2 rounded-lg">
+                        <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+                        <span className="text-gray-900">
+                          {new Date(formData.ngayHetHan).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="date"
+                          value={formData.ngayHetHan}
+                          onChange={(e) => handleInputChange('ngayHetHan', e.target.value)}
+                          className={cn(
+                            'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary',
+                            validationErrors.ngayHetHan ? 'border-red-500' : 'border-gray-300'
+                          )}
+                        />
+                        {validationErrors.ngayHetHan && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.ngayHetHan}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Terms */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Điều khoản chung *
+                  </label>
+                  {isViewMode ? (
+                    <div className="bg-gray-100 px-3 py-2 rounded-lg min-h-[100px]">
+                      <p className="text-gray-900 whitespace-pre-line">{formData.dienKhoan}</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <textarea
+                        value={formData.dienKhoan}
+                        onChange={(e) => handleInputChange('dienKhoan', e.target.value)}
+                        rows={4}
+                        className={cn(
+                          'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary',
+                          validationErrors.dienKhoan ? 'border-red-500' : 'border-gray-300'
+                        )}
+                        placeholder="Nhập điều khoản chung của hợp đồng"
+                      />
+                      {validationErrors.dienKhoan && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.dienKhoan}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Services Section */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">Dịch vụ đính kèm</h3>
+
+                {/* Required Services */}
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-800 mb-3 flex items-center">
+                    <AlertTriangle className="h-4 w-4 text-red-500 mr-2" />
+                    Dịch vụ bắt buộc
+                  </h4>
+                  <div className="space-y-3">
+                    {getRequiredServices().map((service) => (
+                      <div key={service.id} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h5 className="font-medium text-gray-900">{service.name}</h5>
+                            <p className="text-sm text-gray-600">{service.description}</p>
+                            <p className="text-sm font-medium text-gray-900 mt-1">
+                              {service.price.toLocaleString('vi-VN')} {service.unit}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleViewServiceDetails(service.id)}
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                            title="Xem chi tiết điều khoản"
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Optional Services */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-800 flex items-center">
+                      <Plus className="h-4 w-4 text-blue-500 mr-2" />
+                      Dịch vụ tùy chọn
+                    </h4>
+                    {!isViewMode && (
+                      <button
+                        onClick={() => setIsAddServicesModalOpen(true)}
+                        className="bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary-600 transition-colors text-sm flex items-center"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Thêm dịch vụ
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {getSelectedOptionalServices().map((service) => (
+                      <div key={service.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h5 className="font-medium text-gray-900">{service.name}</h5>
+                            <p className="text-sm text-gray-600">{service.description}</p>
+                            <p className="text-sm font-medium text-gray-900 mt-1">
+                              {service.price.toLocaleString('vi-VN')} {service.unit}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleViewServiceDetails(service.id)}
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                              title="Xem chi tiết điều khoản"
+                            >
+                              <HelpCircle className="h-4 w-4" />
+                            </button>
+                            {(isEditMode || isCreateMode) && (
+                              <button
+                                onClick={() => handleRemoveService(service.id)}
+                                className="text-red-600 hover:text-red-800 p-1 rounded"
+                                title="Hủy dịch vụ"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {selectedOptionalServices.size === 0 && (
+                      <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
+                        <Plus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500">Chưa chọn dịch vụ tùy chọn nào</p>
+                        {!isViewMode && (
+                          <button
+                            onClick={() => setIsAddServicesModalOpen(true)}
+                            className="text-primary hover:text-primary-600 mt-2"
+                          >
+                            Thêm dịch vụ →
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Value */}
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-900">Tổng giá trị hợp đồng:</span>
+                  <div className="flex items-center">
+                    <DollarSign className="h-5 w-5 text-primary mr-1" />
+                    <span className="text-xl font-bold text-primary">
+                      {calculateTotalValue().toLocaleString('vi-VN')} VND
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-6 border-t">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  {isViewMode ? 'Đóng' : 'Hủy'}
+                </button>
+                {!isViewMode && (
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 flex items-center"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loading size="sm" text="" className="mr-2" />
+                        Đang lưu...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        {isCreateMode ? 'Tạo hợp đồng' : 'Lưu thay đổi'}
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add Services Modal */}
+      <AddServicesModal
+        isOpen={isAddServicesModalOpen}
+        onClose={() => setIsAddServicesModalOpen(false)}
+        onServicesSelected={handleAddServices}
+        excludeServiceIds={[
+          ...getRequiredServices().map(s => s.id),
+          ...getCurrentOptionalServiceIds()
+        ]}
+      />
+
+      {/* Service Details Modal */}
+      <ServiceDetailsModal
+        isOpen={isServiceDetailsOpen}
+        onClose={() => setIsServiceDetailsOpen(false)}
+        service={selectedServiceForDetails}
+      />
+    </>
+  );

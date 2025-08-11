@@ -25,4 +25,6 @@ public interface PhuLucDichVuRepository extends JpaRepository<PhuLucDichVu, Inte
 
     boolean existsByDichVu_MaDichVuAndNgayKetThucAfter(String maDichVu, Date date);
 
+    @Query("SELECT p FROM PhuLucDichVu p JOIN FETCH p.dichVu WHERE p.maHopDong = :maHopDong")
+    List<PhuLucDichVu> findByMaHopDongWithDichVu(@Param("maHopDong") String maHopDong);
 }

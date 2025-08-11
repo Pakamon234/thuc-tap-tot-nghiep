@@ -28,7 +28,7 @@ public class PhuLucDichVu {
     @Column(name = "mahopdong", nullable = false, length = 255)
     private String maHopDong;
 
-    @ManyToOne
+    @ManyToOne(fetch = jakarta.persistence.FetchType.EAGER)
     @JoinColumn(name = "madichvu", referencedColumnName = "madichvu", nullable = false)
     private DichVu dichVu;
 
