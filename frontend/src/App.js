@@ -5,6 +5,9 @@ import DangKyForm from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import MyContracts from './pages/MyContracts';
 import Layout from './components/Layout';
+import UserManagement from './pages/UserManagement';
+import ServicesManagement from './pages/ServicesManagement';
+
 
 function App() {
   return (
@@ -17,6 +20,8 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/my-contracts" element={<MyContracts />} />
+          <Route path="/users" element={< UserManagement/>} />
+          <Route path="/services" element={< ServicesManagement/>} />
           {/* Có thể thêm route con khác ở đây */}
         </Route>
 

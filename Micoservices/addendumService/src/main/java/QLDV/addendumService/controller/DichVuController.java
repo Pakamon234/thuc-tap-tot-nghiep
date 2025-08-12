@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import QLDV.addendumService.model.DichVu;
+import QLDV.addendumService.model.DichVu.TrangThai;
 import QLDV.addendumService.repository.CauHinhDichVuRepository;
 import QLDV.addendumService.repository.DichVuRepository;
 import QLDV.addendumService.repository.GoiCuocDichVuRepository;
@@ -58,10 +59,12 @@ public class DichVuController {
 
 
     // Lấy tất cả dịch vụ
-    @GetMapping
-    public List<DichVu> getAllDichVu() {
-        return dichVuRepository.findAll();
-    }
+@GetMapping
+public ResponseEntity<List<DichVu>> getAllDichVu() {
+    List<DichVu> services = dichVuRepository.findAll();
+    return ResponseEntity.ok(services); // Return 200 OK with the list of services
+}
+
 
     // Lấy dịch vụ theo mã
     @GetMapping("/{maDichVu}")
@@ -167,5 +170,77 @@ public ResponseEntity<?> updateDichVu(
         dichVuRepository.deleteById(maDichVu);
         return ResponseEntity.ok("Xoá dịch vụ thành công");
     }
+    @GetMapping("/stats")
+public ResponseEntity<?> getServiceStats() {
+    try {
+        // Calculate total number of services
+        long totalServices = dichVuRepository.count();
+        
+        // Calculate number of active services
+        long activeServices = dichVuRepository.countByTrangThai(TrangThai.HoatDong);
+        
+        // Calculate number of inactive services
+        long inactiveServices = dichVuRepository.countByTrangThai(TrangThai.NgungHoatDong);
+
+        // You can also add more statistics like the number of configurations, etc.
+        long totalConfigurations = cauHinhDichVuRepository.count();  // Example for configurations
+
+        // Prepare statistics object
+        ServiceStats stats = new ServiceStats(totalServices, activeServices, inactiveServices, totalConfigurations);
+        
+        return ResponseEntity.ok(stats);
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching stats");
+    }
+}
+
+// Create a custom stats class to hold the statistics
+public static class ServiceStats {
+    private long totalServices;
+    private long activeServices;
+    private long inactiveServices;
+    private long totalConfigurations;
+
+    // Constructor, getters, and setters
+    public ServiceStats(long totalServices, long activeServices, long inactiveServices, long totalConfigurations) {
+        this.totalServices = totalServices;
+        this.activeServices = activeServices;
+        this.inactiveServices = inactiveServices;
+        this.totalConfigurations = totalConfigurations;
+    }
+
+    public long getTotalServices() {
+        return totalServices;
+    }
+
+    public void setTotalServices(long totalServices) {
+        this.totalServices = totalServices;
+    }
+
+    public long getActiveServices() {
+        return activeServices;
+    }
+
+    public void setActiveServices(long activeServices) {
+        this.activeServices = activeServices;
+    }
+
+    public long getInactiveServices() {
+        return inactiveServices;
+    }
+
+    public void setInactiveServices(long inactiveServices) {
+        this.inactiveServices = inactiveServices;
+    }
+
+    public long getTotalConfigurations() {
+        return totalConfigurations;
+    }
+
+    public void setTotalConfigurations(long totalConfigurations) {
+        this.totalConfigurations = totalConfigurations;
+    }
+}
+
 
 }

@@ -18,7 +18,7 @@ public class CorsConfig {
             "http://localhost:3000",              // Frontend dev
             "https://your-production-frontend.com" // Frontend prod
         ));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
         config.setAllowedHeaders(Arrays.asList("*"));
         config.setAllowCredentials(true); // Cho phép gửi Cookie/JWT
 

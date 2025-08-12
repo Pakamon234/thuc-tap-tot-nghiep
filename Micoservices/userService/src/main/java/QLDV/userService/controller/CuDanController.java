@@ -1,15 +1,21 @@
 package QLDV.userService.controller;
 
 import QLDV.userService.model.CuDan;
+import QLDV.userService.model.CuDan.TrangThaiCuDan;
 import QLDV.userService.model.CanHo;
 import QLDV.userService.repository.CuDanRepository;
 import jakarta.transaction.Transactional;
 import QLDV.userService.repository.CanHoRepository;
 import QLDV.userService.dto.CuDanDTO;
+import QLDV.userService.dto.ResidentListItemDTO;
 import QLDV.userService.dto.ThongTinCuDanDTO;
 import QLDV.userService.dto.ThongTinCuDanDTO;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
@@ -35,7 +41,74 @@ public class CuDanController {
 
     @Autowired
     private CanHoRepository canHoRepository;
+// GET /api/cudan?search=&trangThai=&maCanHo=&page=&limit=
+    @GetMapping
+    public ResponseEntity<?> list(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false, name = "trangThai") String trangThaiParam, // 'ở' | 'không ở nữa'
+            @RequestParam(required = false) String maCanHo,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        TrangThaiCuDan trangThai = parseTrangThai(trangThaiParam);
 
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, limit), Sort.by(Sort.Direction.DESC, "id"));
+        Page<CuDan> result = cuDanRepository.searchResidents(
+                isBlank(search) ? null : search.trim(),
+                isBlank(maCanHo) ? null : maCanHo.trim(),
+                trangThai,
+                pageable
+        );
+
+        List<ResidentListItemDTO> items = result.getContent().stream().map(cd -> {
+            String ma = (cd.getCanHo() != null) ? cd.getCanHo().getMaCanHo() : null;
+            String tenDN = (cd.getTaiKhoan() != null) ? cd.getTaiKhoan().getUsername() : null;
+            String tkt = (cd.getTaiKhoan() != null) ? cd.getTaiKhoan().getStatus() : null;
+            Date ngayDK = (cd.getTaiKhoan() != null) ? cd.getTaiKhoan().getNgayDangKy() : null;
+
+            // Hiển thị thân thiện cho enum
+            String ttView = (cd.getTrangThai() == TrangThaiCuDan.không_ở_nữa) ? "không ở nữa" : "ở";
+
+            return new ResidentListItemDTO(
+                    cd.getId(), cd.getHoTen(), cd.getEmail(), cd.getSoDienThoai(),
+                    ma, ttView, tenDN, tkt, ngayDK
+            );
+        }).toList();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("data", items);
+        body.put("pagination", Map.of(
+                "page", page,
+                "limit", limit,
+                "totalPages", result.getTotalPages(),
+                "totalItems", result.getTotalElements()
+        ));
+        return ResponseEntity.ok(body);
+    }
+
+    // GET /api/cudan/stats
+    @GetMapping("/stats")
+    public ResponseEntity<?> stats() {
+        long total = cuDanRepository.count();
+        long dangO = cuDanRepository.countByTrangThai(TrangThaiCuDan.ở);
+        long khongONua = cuDanRepository.countByTrangThai(TrangThaiCuDan.không_ở_nữa);
+        long choDuyet = cuDanRepository.countByTaiKhoan_TrangThaiIgnoreCase("Chờ duyệt");
+        return ResponseEntity.ok(Map.of(
+                "total", total, "dangO", dangO, "khongONua", khongONua, "choDuyet", choDuyet
+        ));
+    }
+
+    private boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }
+
+    // Map chuỗi từ FE sang enum trong entity (vd: "không ở nữa" -> "không_ở_nữa")
+    private TrangThaiCuDan parseTrangThai(String input) {
+        if (isBlank(input)) return null;
+        String normalized = input.trim().toLowerCase().replace(' ', '_');
+        for (TrangThaiCuDan v : TrangThaiCuDan.values()) {
+            if (v.name().equalsIgnoreCase(normalized)) return v;
+        }
+        return null; // nếu không khớp, bỏ qua filter
+    }
     // Lấy thông tin cư dân và căn hộ theo ID
     @GetMapping("/{id}")
     public ResponseEntity<?> getThongTinCuDanVaCanHo(@PathVariable Long id) {

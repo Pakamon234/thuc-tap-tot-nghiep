@@ -8,6 +8,7 @@ import java.util.Date;
 public class CuDan {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
