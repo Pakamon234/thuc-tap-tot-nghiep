@@ -6,5 +6,6 @@ import QLDV.addendumService.model.DichVu;
 
 public interface DichVuRepository extends JpaRepository<DichVu, String> {
     
+    
 }
 

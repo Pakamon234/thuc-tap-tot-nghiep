@@ -115,6 +115,7 @@ public class PhuLucDichVuController {
         }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy phụ lục để xoá"));
     }
 
+    // Các phương thức tìm kiếm theo trạng thái hiệu lực
     @GetMapping("/hieuluc/{maHopDong}")
     public ResponseEntity<?> getPhuLucDangHieuLuc(@PathVariable String maHopDong) {
         Date today = new Date(); // thời gian hiện tại
@@ -126,6 +127,7 @@ public class PhuLucDichVuController {
         return ResponseEntity.ok(list);
     }
 
+    // Lấy phụ lục đã hết hạn
     @GetMapping("/quahan/{maHopDong}")
     public ResponseEntity<?> getPhuLucHetHan(@PathVariable String maHopDong) {
         Date today = new Date();
@@ -136,6 +138,7 @@ public class PhuLucDichVuController {
         return ResponseEntity.ok(result);
     }
 
+    // Lấy phụ lục sắp hết hạn trong 30 ngày tới
     @GetMapping("/saphethan/{maHopDong}")
     public ResponseEntity<?> getPhuLucSapHetHan(@PathVariable String maHopDong) {
         LocalDate todayLocal = LocalDate.now();
@@ -150,6 +153,29 @@ public class PhuLucDichVuController {
                     .body("Không có phụ lục nào sắp hết hạn trong 3 ngày tới");
         }
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/create")
+    public ResponseEntity<?> create_PLHD(@RequestBody PhuLucDichVuDTO dto) {
+        PhuLucDichVu pl = new PhuLucDichVu();
+
+        pl.setMaHopDong(dto.getMaHopDong());
+        pl.setDonGiaCoDinh(dto.getDonGiaCoDinh());
+        pl.setTrangThai(PhuLucDichVu.TrangThai.valueOf(dto.getTrangThai()));
+        pl.setNgayBatDau(dto.getNgayBatDau());
+        pl.setNgayKetThuc(dto.getNgayKetThuc());
+        pl.setThongTinThem(dto.getThongTinThem());
+
+        // Gắn các entity từ ID
+        pl.setDichVu(dichVuRepository.findById(dto.getMaDichVu()).orElse(null));
+        pl.setCauHinhDichVu(cauHinhDichVuRepository.findById(dto.getCauHinhId()).orElse(null));
+        pl.setGoiCuocDichVu(goiCuocDichVuRepository.findById(dto.getGoiCuocId()).orElse(null));
+
+        String error = validate(pl);
+        if (error != null)
+            return ResponseEntity.badRequest().body(error);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(pl));
     }
 
     // Kiểm tra logic đầu vào
@@ -185,5 +211,74 @@ public class PhuLucDichVuController {
             return "Ngày kết thúc không được nhỏ hơn ngày bắt đầu";
 
         return null;
+    }
+
+    // DTO class for creating PhuLucDichVu
+    public static class PhuLucDichVuDTO {
+        private String maHopDong;
+        private String maDichVu;           // Thay vì truyền DichVu object
+        private int cauHinhId;          // Thay vì truyền CauHinhDichVu object
+        private int goiCuocId;          // Thay vì truyền GoiCuocDichVu object
+        private BigDecimal donGiaCoDinh;
+        private String trangThai;       // Enum dưới dạng String
+        private Date ngayBatDau;
+        private Date ngayKetThuc;
+        private String thongTinThem;
+
+        // Getters and Setters
+        public String getMaHopDong() {
+            return maHopDong;
+        }
+        public void setMaHopDong(String maHopDong) {
+            this.maHopDong = maHopDong;
+        }
+        public String getMaDichVu() {
+            return maDichVu;
+        }
+        public void setMaDichVu(String maDichVu) {
+            this.maDichVu = maDichVu;
+        }
+        public int getCauHinhId() {
+            return cauHinhId;
+        }
+        public void setCauHinhId(int cauHinhId) {
+            this.cauHinhId = cauHinhId;
+        }
+        public int getGoiCuocId() {
+            return goiCuocId;
+        }
+        public void setGoiCuocId(int goiCuocId) {
+            this.goiCuocId = goiCuocId;
+        }
+        public BigDecimal getDonGiaCoDinh() {
+            return donGiaCoDinh;
+        }
+        public void setDonGiaCoDinh(BigDecimal donGiaCoDinh) {
+            this.donGiaCoDinh = donGiaCoDinh;
+        }
+        public String getTrangThai() {
+            return trangThai;
+        }
+        public void setTrangThai(String trangThai) {
+            this.trangThai = trangThai;
+        }
+        public Date getNgayBatDau() {
+            return ngayBatDau;
+        }
+        public void setNgayBatDau(Date ngayBatDau) {
+            this.ngayBatDau = ngayBatDau;
+        }
+        public Date getNgayKetThuc() {
+            return ngayKetThuc;
+        }
+        public void setNgayKetThuc(Date ngayKetThuc) {
+            this.ngayKetThuc = ngayKetThuc;
+        }
+        public String getThongTinThem() {
+            return thongTinThem;
+        }
+        public void setThongTinThem(String thongTinThem) {
+            this.thongTinThem = thongTinThem;
+        }
     }
 }

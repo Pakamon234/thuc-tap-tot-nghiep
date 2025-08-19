@@ -1,0 +1,118 @@
+# Tài liệu API của User Service
+
+## 1. Quản lý Xác thực (AuthController)
+Endpoint gốc: /api/auth
+
+### 1.1. Đăng nhập
+- Endpoint: POST /login
+- Mô tả: Xác thực người dùng và cấp quyền truy cập
+- Input:
+  + username: String (tên đăng nhập)
+  + password: String (mật khẩu)
+- Output:
+  + Thành công (200): 
+    * message: "Đăng nhập thành công"
+    * id: Long (ID người dùng)
+    * loaiTaiKhoan: String (Loại tài khoản)
+    * status: String (Trạng thái tài khoản)
+  + Thất bại:
+    * 401: "Tên đăng nhập/mật khẩu sai"
+    * 403: "Tài khoản bị khóa"
+- Luồng hoạt động:
+  1. Nhận request chứa username và password
+  2. Tìm kiếm tài khoản theo username trong database
+  3. Nếu không tìm thấy tài khoản -> Trả về lỗi 401
+  4. Nếu tìm thấy, kiểm tra mật khẩu bằng PasswordUtil.matches()
+  5. Nếu mật khẩu không khớp -> Trả về lỗi 401
+  6. Kiểm tra trạng thái khóa của tài khoản
+  7. Nếu tài khoản bị khóa -> Trả về lỗi 403
+  8. Trả về thông tin đăng nhập thành công
+
+## 2. Quản lý Cư dân (CuDanController)
+Endpoint gốc: /api/cudan
+
+### 2.1. Lấy thông tin cư dân và căn hộ
+- Endpoint: GET /{id}
+- Mô tả: Lấy thông tin chi tiết của cư dân và căn hộ theo ID
+- Output:
+  + Thành công (200):
+    * message: "Lấy thông tin thành công"
+    * cuDan: Object (thông tin cư dân)
+    * canHo: Object (thông tin căn hộ)
+  + Thất bại (404): "Không tìm thấy cư dân với ID: {id}"
+
+### 2.2. Cập nhật thông tin cư dân
+- Endpoint: PUT /{id}
+- Mô tả: Cập nhật thông tin cư dân
+- Input (CuDanDTO):
+  + hoTen: String
+  + email: String
+  + soDienThoai: String
+  + cccd: String
+  + diaChi: String
+  + trangThai: String (ở | không_ở_nữa)
+  + ngaySinh: String (yyyy-MM-dd)
+  + maCanHo: String
+- Output:
+  + Thành công (200): "Cập nhật thông tin cư dân thành công"
+  + Thất bại:
+    * 404: "Không tìm thấy cư dân với id: {id}"
+    * 400: Các lỗi validate dữ liệu
+
+### 2.3. Lấy danh sách thông tin cư dân
+- Endpoint: GET /thong-tin
+- Mô tả: Lấy danh sách tất cả cư dân
+- Output: Danh sách ThongTinCuDanDTO
+
+## 3. Đăng ký (DangKyController)
+Endpoint gốc: /api/dangky
+
+### 3.1. Đăng ký cư dân
+- Endpoint: POST /
+- Mô tả: Đăng ký tài khoản mới cho cư dân
+- Input (DangKyCuDanRequest):
+  + tenDangNhap: String
+  + matKhau: String
+  + hoTen: String
+  + email: String (@gmail.com)
+  + soDienThoai: String
+  + ngaySinh: LocalDate
+  + cccd: String
+  + diaChi: String
+  + canHoId: String
+- Output:
+  + Thành công (200): "Đăng ký thành công. Vui lòng chờ duyệt."
+  + Thất bại (400):
+    * "Tên đăng nhập đã tồn tại"
+    * "CCCD đã được đăng ký"
+    * "Email không hợp lệ"
+
+### 3.2. Lấy danh sách căn hộ
+- Endpoint: GET /canho
+- Mô tả: Lấy danh sách tất cả căn hộ
+- Output: Danh sách CanHo
+
+## 4. Quản lý Tài khoản (TaiKhoanController)
+Endpoint gốc: /api/taikhoan
+
+### 4.1. Duyệt/Hủy duyệt tài khoản
+- Endpoint: PUT /duyet/{id}
+- Mô tả: Xử lý duyệt hoặc hủy duyệt tài khoản
+- Input:
+  + action: String (duyet | huy)
+- Output:
+  + Thành công (200): 
+    * Duyệt: "Duyệt tài khoản thành công"
+    * Hủy: "Hủy duyệt tài khoản thành công"
+  + Thất bại:
+    * 404: "Không tìm thấy tài khoản"
+    * 400: "Tài khoản không ở trạng thái 'Chờ duyệt'"
+
+### 4.2. Khóa/Mở khóa tài khoản
+- Endpoint: PUT /toggle-khoa/{id}
+- Mô tả: Chuyển đổi trạng thái khóa/mở khóa tài khoản
+- Output:
+  + Thành công (200):
+    * message: "Cập nhật trạng thái tài khoản thành công"
+    * trangThaiMoi: String
+  + Thất bại (404): "Không tìm thấy tài khoản"
