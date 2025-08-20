@@ -190,15 +190,15 @@ public class DichVuController {
 
         // Lấy danh sách gói cước liên quan
         List<GoiCuocDichVu> dsGoiCuoc = goiCuocDichVuRepository.findByDichVu_MaDichVu(maDichVu);
-        if (dsGoiCuoc.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy gói cước cho dịch vụ: " + maDichVu);
-        }
+        // if (dsGoiCuoc.isEmpty()) {
+        //     return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy gói cước cho dịch vụ: " + maDichVu);
+        // }
 
         // Lấy danh sách cấu hình dịch vụ liên quan
         List<CauHinhDichVu> dsCauHinh = cauHinhDichVuRepository.findByDichVu_MaDichVu(maDichVu);
-        if (dsCauHinh.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy cấu hình dịch vụ cho dịch vụ: " + maDichVu);
-        }
+        // if (dsCauHinh.isEmpty()) {
+        //     return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy cấu hình dịch vụ cho dịch vụ: " + maDichVu);
+        // }
 
         // Lấy danh sách tham số phí liên quan
         List<ThamSoPhi> dsThamSoPhi = new ArrayList<>();

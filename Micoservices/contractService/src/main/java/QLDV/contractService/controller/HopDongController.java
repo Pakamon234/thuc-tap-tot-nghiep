@@ -103,6 +103,72 @@ public class HopDongController {
         return ResponseEntity.ok("Hợp đồng đã được duyệt và chuyển sang trạng thái 'Hiệu lực'");
     }
 
+     // Thêm hợp đồng với phụ lục dịch vụ
+    @Transactional
+    @PostMapping("/add-full")
+    public ResponseEntity<?> addHopDongWithPhuLuc(@RequestBody HopDongWithPhuLucDTO request) {
+        logger.info("🔔 Nhận yêu cầu tạo hợp đồng kèm phụ lục");
+
+        HopDongCreateDTO hopDongDTO = request.getHopDong();
+        List<PhuLucDichVuDTO> phuLucList = request.getPhuLucList();
+
+        logger.debug("➡️ Dữ liệu hợp đồng: {}", hopDongDTO);
+        logger.debug("➡️ Số lượng phụ lục: {}", phuLucList.size());
+
+        // Validate HopDong
+        if (hopDongDTO.getMaCanHo() == null || hopDongDTO.getMaCanHo().isBlank()) {
+            logger.warn("❌ Mã căn hộ bị thiếu");
+            return ResponseEntity.badRequest().body("Mã căn hộ không được để trống");
+        }
+        if (hopDongDTO.getNgayKy() == null) {
+            logger.warn("❌ Ngày ký bị thiếu");
+            return ResponseEntity.badRequest().body("Ngày ký không được để trống");
+        }
+        if (hopDongDTO.getMauHopDongId() == null) {
+            logger.warn("❌ Mẫu hợp đồng bị thiếu");
+            return ResponseEntity.badRequest().body("Vui lòng chọn mẫu hợp đồng");
+        }
+
+        // Tạo hợp đồng mới
+        String newMaHopDong = generateNewMaHopDong();
+        logger.info("✅ Sinh mã hợp đồng mới: {}", newMaHopDong);
+
+        HopDong hopDong = new HopDong();
+        hopDong.setMaHopDong(newMaHopDong);
+        hopDong.setMaCuDan(hopDongDTO.getMaCuDan());
+        hopDong.setMaCanHo(hopDongDTO.getMaCanHo());
+        hopDong.setMauHopDongId(hopDongDTO.getMauHopDongId());
+        hopDong.setNgayKy(hopDongDTO.getNgayKy());
+        hopDong.setNgayKetThuc(hopDongDTO.getNgayKetThuc());
+        hopDong.setTrangThai(HopDong.TrangThaiHopDong.Chờ_duyệt);
+
+        HopDong savedHopDong = hopDongRepository.save(hopDong);
+        logger.info("✅ Hợp đồng đã lưu: {}", savedHopDong.getMaHopDong());
+
+        // Gửi từng phụ lục
+        for (PhuLucDichVuDTO dto : phuLucList) {
+            dto.setMaHopDong(newMaHopDong);
+            logger.debug("📦 Gửi phụ lục: {}", dto);
+
+            String response = webClientBuilder.build()
+                .post()
+                .uri("http://localhost:8080/api/phulucdichvu/create")
+                .bodyValue(dto)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+
+            logger.info("✅ Phản hồi từ addendumService: {}", response);
+        }
+
+        logger.info("🎉 Hoàn tất tạo hợp đồng và phụ lục");
+        // Tạo response có thêm message
+        HopDongResponseDTO responseDTO = new HopDongResponseDTO(savedHopDong, "Tạo hợp đồng thành công");
+
+        return ResponseEntity.ok(responseDTO);
+
+    }
+
     // Giả sử phương thức generateNewMaHopDong
     private String generateNewMaHopDong() {
         long count = hopDongRepository.count();
@@ -119,6 +185,57 @@ public class HopDongController {
 
         public void setMaNguoiKyBQL(int maNguoiKyBQL) {
             this.maNguoiKyBQL = maNguoiKyBQL;
+        }
+    }
+
+    //DTO class
+    public static class HopDongCreateDTO {
+        private int maCuDan;
+        private String maCanHo;
+        private Integer mauHopDongId;
+        private LocalDate ngayKy;
+        private LocalDate ngayKetThuc;
+
+        // Getters and Setters
+        public int getMaCuDan() {
+            return maCuDan;
+        }
+        public void setMaCuDan(int maCuDan) {
+            this.maCuDan = maCuDan;
+        }
+        public String getMaCanHo() {
+            return maCanHo;
+        }
+        public void setMaCanHo(String maCanHo) {
+            this.maCanHo = maCanHo;
+        }
+        public Integer getMauHopDongId() {
+            return mauHopDongId;
+        }
+        public void setMauHopDongId(Integer mauHopDongId) {
+            this.mauHopDongId = mauHopDongId;
+        }
+        public LocalDate getNgayKy() {
+            return ngayKy;
+        }
+        public void setNgayKy(LocalDate ngayKy) {
+            this.ngayKy = ngayKy;
+        }
+        public LocalDate getNgayKetThuc() {
+            return ngayKetThuc;
+        }
+        public void setNgayKetThuc(LocalDate ngayKetThuc) {
+            this.ngayKetThuc = ngayKetThuc;
+        }
+        @Override
+        public String toString() {
+            return "HopDongCreateDTO{" +
+                    "maCuDan=" + maCuDan +
+                    ", maCanHo='" + maCanHo + '\'' +
+                    ", mauHopDongId=" + mauHopDongId +
+                    ", ngayKy=" + ngayKy +
+                    ", ngayKetThuc=" + ngayKetThuc +
+                    '}';
         }
     }
 
@@ -155,13 +272,22 @@ public class HopDongController {
     }
 
     public static class HopDongWithPhuLucDTO {
-        private HopDongResponseDTO hopDong;
-        private List<PhuLucDichVuDTO> phuLucList;
+        private HopDongCreateDTO hopDong;
+        private List<PhuLucDichVuDTO> phuLucList; // ✅ sửa từ 1 → danh sách
 
-        public HopDongResponseDTO getHopDong() { return hopDong; }
-        public void setHopDong(HopDongResponseDTO hopDong) { this.hopDong = hopDong; }
-        public List<PhuLucDichVuDTO> getPhuLucList() { return phuLucList; }
-        public void setPhuLucList(List<PhuLucDichVuDTO> phuLucList) { this.phuLucList = phuLucList; }
+        // Getters and Setters
+        public HopDongCreateDTO getHopDong() {
+            return hopDong;
+        }
+        public void setHopDong(HopDongCreateDTO hopDong) {
+            this.hopDong = hopDong;
+        }
+        public List<PhuLucDichVuDTO> getPhuLucList() {
+            return phuLucList;
+        }
+        public void setPhuLucList(List<PhuLucDichVuDTO> phuLucList) {
+            this.phuLucList = phuLucList;
+        }
     }
 
     public static class HopDongResponseDTO {
