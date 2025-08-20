@@ -66,7 +66,16 @@ public class CauHinhDichVuController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy cấu hình");
         }
     }
-
+// Get configurations by service ID (maDichVu)
+    @GetMapping("/service/{serviceId}")
+    public ResponseEntity<?> getConfigurationsByServiceId(@PathVariable String serviceId) {
+        List<CauHinhDichVu> configurations = cauHinhDichVuRepository.findByDichVu_MaDichVu(serviceId);
+        if (!configurations.isEmpty()) {
+            return ResponseEntity.ok(configurations);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy cấu hình cho dịch vụ");
+        }
+    }
     // THÊM mới
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CauHinhDichVu cauHinh) {

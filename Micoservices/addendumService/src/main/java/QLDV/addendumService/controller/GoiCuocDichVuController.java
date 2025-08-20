@@ -64,6 +64,15 @@ public class GoiCuocDichVuController {
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy gói cước"));
     }
+    @GetMapping("/service/{serviceId}")
+    public ResponseEntity<?> getServicePackagesByServiceId(@PathVariable String serviceId) {
+        List<GoiCuocDichVu> servicePackages = goiCuocDichVuRepository.findByDichVu_MaDichVu(serviceId);
+        if (!servicePackages.isEmpty()) {
+            return ResponseEntity.ok(servicePackages);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy gói cước cho dịch vụ");
+        }
+    }
 
     // Thêm mới
     @PostMapping

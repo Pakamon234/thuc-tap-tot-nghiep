@@ -74,7 +74,16 @@ public class ThamSoPhiController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(thamSoPhiRepository.save(thamSoPhi));
     }
-
+// Get fee parameters by configuration ID
+    @GetMapping("/configuration/{cauHinhId}")
+    public ResponseEntity<?> getFeeParametersByConfigurationId(@PathVariable int cauHinhId) {
+        List<ThamSoPhi> feeParameters = thamSoPhiRepository.findByCauHinhDichVu_Id(cauHinhId);  // Adjust to use cauHinhId
+        if (!feeParameters.isEmpty()) {
+            return ResponseEntity.ok(feeParameters);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy tham số phí cho cấu hình");
+        }
+    }
     // Cập nhật
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable int id, @RequestBody ThamSoPhi thamSoPhi) {

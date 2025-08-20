@@ -57,14 +57,12 @@ public class DichVuController {
     @Autowired
     private CauHinhDichVuRepository cauHinhDichVuRepository;
 
-
     // Lấy tất cả dịch vụ
-@GetMapping
-public ResponseEntity<List<DichVu>> getAllDichVu() {
-    List<DichVu> services = dichVuRepository.findAll();
-    return ResponseEntity.ok(services); // Return 200 OK with the list of services
-}
-
+    @GetMapping
+    public ResponseEntity<List<DichVu>> getAllDichVu() {
+        List<DichVu> services = dichVuRepository.findAll();
+        return ResponseEntity.ok(services); // Return 200 OK with the list of services
+    }
 
     // Lấy dịch vụ theo mã
     @GetMapping("/{maDichVu}")
@@ -101,45 +99,43 @@ public ResponseEntity<List<DichVu>> getAllDichVu() {
     }
 
     @PutMapping("/{maDichVu}")
-public ResponseEntity<?> updateDichVu(
-        @PathVariable String maDichVu,
-        @RequestBody DichVu updatedDichVu,
-        @RequestParam(name = "override", defaultValue = "false") boolean override
-) {
-    return dichVuRepository.findById(maDichVu).map(existing -> {
-        if (updatedDichVu.getTenDichVu() == null || updatedDichVu.getTenDichVu().isBlank()) {
-            return ResponseEntity.badRequest().body("Tên dịch vụ là bắt buộc");
-        }
-        if (updatedDichVu.getLoaiTinhPhi() == null) {
-            return ResponseEntity.badRequest().body("Loại tính phí là bắt buộc");
-        }
-        if (updatedDichVu.getTrangThai() == null) {
-            return ResponseEntity.badRequest().body("Trạng thái là bắt buộc");
-        }
-
-        boolean isChangingTrangThai = !updatedDichVu.getTrangThai().equals(existing.getTrangThai());
-        if (isChangingTrangThai) {
-            boolean hasActivePhuLuc = phuLucDichVuRepository
-                    .existsByDichVu_MaDichVuAndNgayKetThucAfter(maDichVu, new Date());
-
-            if (hasActivePhuLuc && !override) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body("⚠ Dịch vụ còn phụ lục đang hiệu lực. Bạn không có quyền thay đổi trạng thái. Hãy xác nhận override nếu bạn là quản trị viên.");
+    public ResponseEntity<?> updateDichVu(
+            @PathVariable String maDichVu,
+            @RequestBody DichVu updatedDichVu,
+            @RequestParam(name = "override", defaultValue = "false") boolean override) {
+        return dichVuRepository.findById(maDichVu).map(existing -> {
+            if (updatedDichVu.getTenDichVu() == null || updatedDichVu.getTenDichVu().isBlank()) {
+                return ResponseEntity.badRequest().body("Tên dịch vụ là bắt buộc");
             }
-        }
+            if (updatedDichVu.getLoaiTinhPhi() == null) {
+                return ResponseEntity.badRequest().body("Loại tính phí là bắt buộc");
+            }
+            if (updatedDichVu.getTrangThai() == null) {
+                return ResponseEntity.badRequest().body("Trạng thái là bắt buộc");
+            }
 
-        // Cho cập nhật toàn bộ
-        existing.setTenDichVu(updatedDichVu.getTenDichVu());
-        existing.setDonViTinh(updatedDichVu.getDonViTinh());
-        existing.setMoTa(updatedDichVu.getMoTa());
-        existing.setLoaiTinhPhi(updatedDichVu.getLoaiTinhPhi());
-        existing.setBatBuoc(updatedDichVu.isBatBuoc());
-        existing.setTrangThai(updatedDichVu.getTrangThai());
+            boolean isChangingTrangThai = !updatedDichVu.getTrangThai().equals(existing.getTrangThai());
+            if (isChangingTrangThai) {
+                boolean hasActivePhuLuc = phuLucDichVuRepository
+                        .existsByDichVu_MaDichVuAndNgayKetThucAfter(maDichVu, new Date());
 
-        return ResponseEntity.ok(dichVuRepository.save(existing));
-    }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy dịch vụ cần cập nhật"));
-}
+                if (hasActivePhuLuc && !override) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body("⚠ Dịch vụ còn phụ lục đang hiệu lực. Bạn không có quyền thay đổi trạng thái. Hãy xác nhận override nếu bạn là quản trị viên.");
+                }
+            }
 
+            // Cho cập nhật toàn bộ
+            existing.setTenDichVu(updatedDichVu.getTenDichVu());
+            existing.setDonViTinh(updatedDichVu.getDonViTinh());
+            existing.setMoTa(updatedDichVu.getMoTa());
+            existing.setLoaiTinhPhi(updatedDichVu.getLoaiTinhPhi());
+            existing.setBatBuoc(updatedDichVu.isBatBuoc());
+            existing.setTrangThai(updatedDichVu.getTrangThai());
+
+            return ResponseEntity.ok(dichVuRepository.save(existing));
+        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy dịch vụ cần cập nhật"));
+    }
 
     // Xóa dịch vụ (chỉ khi không bắt buộc)
     @DeleteMapping("/{maDichVu}")
@@ -170,77 +166,77 @@ public ResponseEntity<?> updateDichVu(
         dichVuRepository.deleteById(maDichVu);
         return ResponseEntity.ok("Xoá dịch vụ thành công");
     }
+
     @GetMapping("/stats")
-public ResponseEntity<?> getServiceStats() {
-    try {
-        // Calculate total number of services
-        long totalServices = dichVuRepository.count();
-        
-        // Calculate number of active services
-        long activeServices = dichVuRepository.countByTrangThai(TrangThai.HoatDong);
-        
-        // Calculate number of inactive services
-        long inactiveServices = dichVuRepository.countByTrangThai(TrangThai.NgungHoatDong);
+    public ResponseEntity<?> getServiceStats() {
+        try {
+            // Calculate total number of services
+            long totalServices = dichVuRepository.count();
 
-        // You can also add more statistics like the number of configurations, etc.
-        long totalConfigurations = cauHinhDichVuRepository.count();  // Example for configurations
+            // Calculate number of active services
+            long activeServices = dichVuRepository.countByTrangThai(TrangThai.HoatDong);
 
-        // Prepare statistics object
-        ServiceStats stats = new ServiceStats(totalServices, activeServices, inactiveServices, totalConfigurations);
-        
-        return ResponseEntity.ok(stats);
-    } catch (Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching stats");
-    }
-}
+            // Calculate number of inactive services
+            long inactiveServices = dichVuRepository.countByTrangThai(TrangThai.NgungHoatDong);
 
-// Create a custom stats class to hold the statistics
-public static class ServiceStats {
-    private long totalServices;
-    private long activeServices;
-    private long inactiveServices;
-    private long totalConfigurations;
+            // You can also add more statistics like the number of configurations, etc.
+            long totalConfigurations = cauHinhDichVuRepository.count(); // Example for configurations
 
-    // Constructor, getters, and setters
-    public ServiceStats(long totalServices, long activeServices, long inactiveServices, long totalConfigurations) {
-        this.totalServices = totalServices;
-        this.activeServices = activeServices;
-        this.inactiveServices = inactiveServices;
-        this.totalConfigurations = totalConfigurations;
+            // Prepare statistics object
+            ServiceStats stats = new ServiceStats(totalServices, activeServices, inactiveServices, totalConfigurations);
+
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching stats");
+        }
     }
 
-    public long getTotalServices() {
-        return totalServices;
-    }
+    // Create a custom stats class to hold the statistics
+    public static class ServiceStats {
+        private long totalServices;
+        private long activeServices;
+        private long inactiveServices;
+        private long totalConfigurations;
 
-    public void setTotalServices(long totalServices) {
-        this.totalServices = totalServices;
-    }
+        // Constructor, getters, and setters
+        public ServiceStats(long totalServices, long activeServices, long inactiveServices, long totalConfigurations) {
+            this.totalServices = totalServices;
+            this.activeServices = activeServices;
+            this.inactiveServices = inactiveServices;
+            this.totalConfigurations = totalConfigurations;
+        }
 
-    public long getActiveServices() {
-        return activeServices;
-    }
+        public long getTotalServices() {
+            return totalServices;
+        }
 
-    public void setActiveServices(long activeServices) {
-        this.activeServices = activeServices;
-    }
+        public void setTotalServices(long totalServices) {
+            this.totalServices = totalServices;
+        }
 
-    public long getInactiveServices() {
-        return inactiveServices;
-    }
+        public long getActiveServices() {
+            return activeServices;
+        }
 
-    public void setInactiveServices(long inactiveServices) {
-        this.inactiveServices = inactiveServices;
-    }
+        public void setActiveServices(long activeServices) {
+            this.activeServices = activeServices;
+        }
 
-    public long getTotalConfigurations() {
-        return totalConfigurations;
-    }
+        public long getInactiveServices() {
+            return inactiveServices;
+        }
 
-    public void setTotalConfigurations(long totalConfigurations) {
-        this.totalConfigurations = totalConfigurations;
-    }
-}
+        public void setInactiveServices(long inactiveServices) {
+            this.inactiveServices = inactiveServices;
+        }
 
+        public long getTotalConfigurations() {
+            return totalConfigurations;
+        }
+
+        public void setTotalConfigurations(long totalConfigurations) {
+            this.totalConfigurations = totalConfigurations;
+        }
+    }
 
 }

@@ -4,7 +4,7 @@ import apiClient from './api'; // Assuming api.js is in the same directory
 export const servicesService = {
 getServices: async (filters = {}) => {
   try {
-    const response = await apiClient.get('/dichvu', { params: filters });
+    const response = await apiClient.get('/dichvu');
 
     // Log the full response to inspect its structure
     console.log('API Response: ', response); // Log the full response to check structure
@@ -74,6 +74,14 @@ export const serviceConfigurationService = {
       throw new Error(`Failed to fetch service configurations: ${error.message}`);
     }
   },
+    getServiceConfigurations1: async (serviceId) => {
+    try {
+      const response = await apiClient.get(`/cauhinhdichvu/service/${serviceId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch service configurations: ${error.message}`);
+    }
+  },
   createServiceConfiguration: async (serviceId, configurationData) => {
     try {
       const response = await apiClient.post(`/cauhinhdichvu/${serviceId}`, configurationData);
@@ -102,6 +110,14 @@ export const feeParametersService = {
       throw new Error(`Failed to fetch fee parameters: ${error.message}`);
     }
   },
+    getFeeParameters1: async (configurationId) => {
+    try {
+      const response = await apiClient.get(`/thamsophi/configuration/${configurationId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch fee parameters: ${error.message}`);
+    }
+  },
   createFeeParameter: async (configurationId, feeData) => {
     try {
       const response = await apiClient.post(`/thamsophi/${configurationId}`, feeData);
@@ -125,6 +141,14 @@ export const servicePackagesService = {
   getServicePackages: async (serviceId) => {
     try {
       const response = await apiClient.get(`/goicuocdichvu/${serviceId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch service packages: ${error.message}`);
+    }
+  },
+    getServicePackages1: async (serviceId) => {
+    try {
+      const response = await apiClient.get(`/goicuocdichvu/service/${serviceId}`);
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch service packages: ${error.message}`);
