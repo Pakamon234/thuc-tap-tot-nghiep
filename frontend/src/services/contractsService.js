@@ -29,12 +29,24 @@ const getAvailableContract = async (idMauHopDong, maHopDong) => {
   return response.data; // Trả ra danh sách dịch vụ có sẵn
 };
 
+const getAllServices = async () => {
+  const response = await axios.get(`${API_BASE_URL}/api/dichvu`);
+  return response.data; // Trả ra danh sách dịch vụ
+};
+
+// Tạo hợp đồng mới
+const createContract = async (hopDongData) => {
+  const response = await axios.post(`${API_BASE_URL}/api/hopdong`, hopDongData);
+  return response.data;
+};
 
 const contractsService = {
   getAllUsers,
   getContractsByCuDan,
   getLatestContractTemplateWithServices,
-  getAvailableContract
+  getAvailableContract,
+  getAllServices,
+  createContract
 };
 
 export default contractsService;

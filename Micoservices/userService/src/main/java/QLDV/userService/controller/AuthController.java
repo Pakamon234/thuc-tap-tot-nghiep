@@ -52,6 +52,7 @@ public class AuthController {
         response.put("message", "Đăng nhập thành công");
         response.put("id", user.getId());
         response.put("loaiTaiKhoan", user.getLoaiTaiKhoan());
+        response.put("status", user.getStatus());
 
         return ResponseEntity.ok(response);
     }

@@ -6,7 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import QLDV.addendumService.model.ThamSoPhi;
 
-public interface ThamSoPhiRepository extends JpaRepository<ThamSoPhi, Integer> {
+import java.util.List;
 
-    List<ThamSoPhi> findByCauHinhDichVu_Id(int configurationId);
+public interface ThamSoPhiRepository extends JpaRepository<ThamSoPhi, Integer> {
+    List<ThamSoPhi> findByCauHinhDichVu_Id(int cauHinhDichVuId);
 }

@@ -148,8 +148,8 @@ public class CuDanController {
     }
 
     // Cập nhật thông tin cư dân
-   @PutMapping("/{id}")
-   @Transactional
+    @PutMapping("/{id}")
+    @Transactional
     public ResponseEntity<?> updateCuDan(@PathVariable Long id, @RequestBody CuDanDTO dto) {
         Optional<CuDan> optionalCuDan = cuDanRepository.findById(id);
         if (optionalCuDan.isEmpty()) {
@@ -183,11 +183,16 @@ public class CuDanController {
             return ResponseEntity.badRequest().body(Map.of("message", "Ngày sinh không hợp lệ. Định dạng yyyy-MM-dd"));
         }
 
-
         // Kiểm tra mã căn hộ
         Optional<CanHo> optionalCanHo = canHoRepository.findById(dto.getMaCanHo());
         if (optionalCanHo.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy căn hộ với mã: " + dto.getMaCanHo()));
+        }
+
+        // Kiểm tra nếu mã căn hộ thay đổi
+        if (!cuDan.getCanHo().getMaCanHo().equals(dto.getMaCanHo())) {
+            // Cập nhật trạng thái tài khoản thành "Chờ duyệt"
+            cuDan.getTaiKhoan().setStatus("Chờ duyệt");
         }
 
         cuDan.setCanHo(optionalCanHo.get());
