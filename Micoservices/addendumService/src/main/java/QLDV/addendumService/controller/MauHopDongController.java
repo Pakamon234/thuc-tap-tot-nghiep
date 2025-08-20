@@ -182,7 +182,7 @@ public class MauHopDongController {
         Map<String, Object> response = new HashMap<>();
         response.put("mauHopDong", mau);
         response.put("dichVuBatBuoc", dichVuBatBuoc);
-        response.put("dichVuThuyChon", dichVuThuyChon);
+        response.put("dichVuTuyChon", dichVuThuyChon);
 
         return ResponseEntity.ok(response);
     }

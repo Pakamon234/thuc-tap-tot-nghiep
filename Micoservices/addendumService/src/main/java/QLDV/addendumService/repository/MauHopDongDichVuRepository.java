@@ -17,4 +17,5 @@ public interface MauHopDongDichVuRepository extends JpaRepository<MauHopDongDich
     boolean existsById_MaDichVu(String maDichVu);
 
     List<MauHopDongDichVu> findById_MauId(int mauId);
+    
 }

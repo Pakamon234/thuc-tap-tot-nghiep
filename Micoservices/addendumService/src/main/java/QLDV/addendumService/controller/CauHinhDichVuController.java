@@ -79,6 +79,8 @@ public class CauHinhDichVuController {
     // THÊM mới
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CauHinhDichVu cauHinh) {
+        System.out.println("Received maDichVu: " + cauHinh.getDichVu());
+
         String validationError = validate(cauHinh);
         if (validationError != null) {
             return ResponseEntity.badRequest().body(validationError);

@@ -13,34 +13,6 @@ import QLDV.addendumService.util.MauHopDongDichVuId;
 
 import java.util.List;
 
-// @RestController
-// @RequestMapping("/api/mauhopdongdichvu")
-// public class MauHopDongDichVuController {
-
-//     @Autowired
-//     private MauHopDongDichVuRepository mauHopDongDichVuRepository;
-
-//     // Lấy tất cả mẫu hợp đồng dịch vụ
-//     @GetMapping
-//     public List<MauHopDongDichVu> getAllMauHopDongDichVu() {
-//         return mauHopDongDichVuRepository.findAll();
-//     }
-
-//     // Lấy mẫu hợp đồng dịch vụ theo mauId và maDichVu
-//     @GetMapping("/{mauId}/{maDichVu}")
-//     public MauHopDongDichVu getMauHopDongDichVuById(@PathVariable int mauId, @PathVariable String maDichVu) {
-//         MauHopDongDichVuId id = new MauHopDongDichVuId();
-//         id.setMauHopDong(mauId);
-//         id.setMaDichVu(maDichVu);
-//         return mauHopDongDichVuRepository.findById(id).orElse(null);
-//     }
-
-//     // Thêm mẫu hợp đồng dịch vụ mới
-//     @PostMapping
-//     public MauHopDongDichVu addMauHopDongDichVu(@RequestBody MauHopDongDichVu mauHopDongDichVu) {
-//         return mauHopDongDichVuRepository.save(mauHopDongDichVu);
-//     }
-// }
 @RestController
 @RequestMapping("/api/mauhopdongdichvu")
 public class MauHopDongDichVuController {
@@ -70,6 +42,12 @@ public class MauHopDongDichVuController {
         return repository.findById(id)
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy liên kết mẫu - dịch vụ"));
+    }
+
+    // Lấy danh sách liên kết theo mauId
+    @GetMapping("/mau/{mauId}")
+    public List<MauHopDongDichVu> getByMauId(@PathVariable int mauId) {
+        return repository.findById_MauId(mauId);
     }
 
     // Thêm liên kết mẫu - dịch vụ
@@ -111,4 +89,3 @@ public class MauHopDongDichVuController {
         return ResponseEntity.ok("Xoá liên kết thành công");
     }
 }
-
