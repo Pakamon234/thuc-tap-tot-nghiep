@@ -36,6 +36,9 @@ const NewServicesManagementTab = () => {
   const [newPackageEffectiveDate, setNewPackageEffectiveDate] = useState('');
   const [newPackageStatus, setNewPackageStatus] = useState('HoatDong');
 
+  // Error message state
+  const [errorMessage, setErrorMessage] = useState('');
+
   // Fetch services data from the API
   useEffect(() => {
     const fetchServices = async () => {
@@ -82,7 +85,7 @@ const NewServicesManagementTab = () => {
           batBuoc: newIsMandatory,
           trangThai: newStatus,
         };
-        const response = await axios.put(`http://localhost:8080/api/dichvu/${editingService.maDichVu}`, updatedServiceData);
+        let response = await axios.put(`http://localhost:8080/api/dichvu/${editingService.maDichVu}`, updatedServiceData);
         setServices(services.map(service => 
           service.maDichVu === editingService.maDichVu ? response.data : service
         ));
@@ -90,7 +93,36 @@ const NewServicesManagementTab = () => {
         setShowModal(false);
         setEditingService(null);
       } catch (error) {
-        console.error('Error editing service:', error);
+        if (error.response && error.response.status === 409) {
+          const confirmOverride = window.confirm(error.response.data + " Bạn có muốn override không?");
+          if (confirmOverride) {
+            try {
+              const updatedServiceData = {
+                tenDichVu: newService,
+                donViTinh: newUnit,
+                moTa: newDescription,
+                loaiTinhPhi: newFeeType,
+                batBuoc: newIsMandatory,
+                trangThai: newStatus,
+              };
+              const response = await axios.put(`http://localhost:8080/api/dichvu/${editingService.maDichVu}`, updatedServiceData, {
+                params: { override: true }
+              });
+              setServices(services.map(service => 
+                service.maDichVu === editingService.maDichVu ? response.data : service
+              ));
+              clearForm();
+              setShowModal(false);
+              setEditingService(null);
+            } catch (overrideError) {
+              console.error('Error editing service with override:', overrideError);
+              alert(overrideError.response?.data || 'Lỗi khi cập nhật với override');
+            }
+          }
+        } else {
+          console.error('Error editing service:', error);
+          alert(error.response?.data || 'Lỗi khi cập nhật dịch vụ');
+        }
       }
     }
   };
@@ -102,47 +134,71 @@ const NewServicesManagementTab = () => {
       setServices(services.filter(service => service.maDichVu !== id));
     } catch (error) {
       console.error('Error deleting service:', error);
+      setErrorMessage(error.response?.data || 'Lỗi khi xóa dịch vụ');
+      setTimeout(() => setErrorMessage(''), 3000);
     }
   };
 
   // Handle viewing the service details
   const handleViewService = async (serviceId) => {
     try {
+      // Gọi API lấy chi tiết dịch vụ
       const serviceDetailsResponse = await axios.get(`http://localhost:8080/api/dichvu/${serviceId}`);
       console.log('Service Details:', serviceDetailsResponse.data);
+
+      // Gọi API lấy cấu hình dịch vụ
+      let configurations = [];
       try {
         const configResponse = await axios.get(`http://localhost:8080/api/cauhinhdichvu/service/${serviceId}`);
         console.log('Configurations for Service:', configResponse.data);
-
-        let feeParameters = [];
-        if (configResponse.data && configResponse.data.length > 0) {
-          const configurationId = configResponse.data[0].id;
-          console.log('Configuration ID:', configurationId);
-          const feeResponse = await axios.get(`http://localhost:8080/api/thamsophi/configuration/${configurationId}`);
-          console.log('Fee Parameters for Configuration:', feeResponse.data);
-          feeParameters = feeResponse.data;
-        }
-
-        const packageResponse = await axios.get(`http://localhost:8080/api/goicuocdichvu/service/${serviceId}`);
-        console.log('Service Packages for Service:', packageResponse.data);
-
-        setServiceDetails({
-          service: serviceDetailsResponse.data,
-          configurations: configResponse.data,
-          feeParameters: feeParameters,
-          servicePackages: packageResponse.data,
-        });
+        configurations = configResponse.data || [];
       } catch (configError) {
         console.error('Error fetching configurations:', configError);
-        setServiceDetails({
-          service: serviceDetailsResponse.data,
-          configurations: [],
-          feeParameters: [],
-          servicePackages: [],
-        });
+        configurations = [];
       }
+
+      // Gọi API lấy tham số phí (nếu có cấu hình)
+      let feeParameters = [];
+      if (configurations.length > 0) {
+        const configurationId = configurations[0].id;
+        console.log('Configuration ID:', configurationId);
+        try {
+          const feeResponse = await axios.get(`http://localhost:8080/api/thamsophi/configuration/${configurationId}`);
+          console.log('Fee Parameters for Configuration:', feeResponse.data);
+          feeParameters = feeResponse.data || [];
+        } catch (feeError) {
+          console.error('Error fetching fee parameters:', feeError);
+          feeParameters = [];
+        }
+      }
+
+      // Gọi API lấy gói cước dịch vụ
+      let servicePackages = [];
+      try {
+        const packageResponse = await axios.get(`http://localhost:8080/api/goicuocdichvu/service/${serviceId}`);
+        console.log('Service Packages for Service:', packageResponse.data);
+        servicePackages = packageResponse.data || [];
+      } catch (packageError) {
+        console.error('Error fetching service packages:', packageError);
+        servicePackages = [];
+      }
+
+      // Cập nhật state với tất cả dữ liệu
+      setServiceDetails({
+        service: serviceDetailsResponse.data,
+        configurations,
+        feeParameters,
+        servicePackages,
+      });
     } catch (error) {
       console.error('Error fetching service details:', error);
+      // Nếu lỗi khi lấy chi tiết dịch vụ, đặt tất cả về giá trị mặc định
+      setServiceDetails({
+        service: null,
+        configurations: [],
+        feeParameters: [],
+        servicePackages: [],
+      });
     }
   };
 
@@ -194,6 +250,8 @@ const NewServicesManagementTab = () => {
   const handleEditConfig = async () => {
     try {
       const updatedConfigData = {
+        dichVu:{maDichVu: serviceDetails.service.maDichVu},
+        cauHinhDichVu: selectedConfig.id,
         tenCauHinh: newConfig,
         ngayHieuLuc: newDateEffective,
       };
@@ -227,6 +285,8 @@ const NewServicesManagementTab = () => {
       setShowConfigModal(false);
     } catch (error) {
       console.error('Error deleting configuration:', error);
+      setErrorMessage(error.response?.data || 'Lỗi khi xóa cấu hình');
+      setTimeout(() => setErrorMessage(''), 3000);
     }
   };
 
@@ -244,7 +304,7 @@ const NewServicesManagementTab = () => {
         giaTriTu: parseFloat(newStartValue),
         giaTriDen: newEndValue ? parseFloat(newEndValue) : 999999,
         donGia: parseFloat(newUnitPrice),
-        cauHinh: { id: selectedConfig.id }
+        cauHinhDichVu: { id: selectedConfig.id }
       };
 
       const response = await axios.post('http://localhost:8080/api/thamsophi', newFeeParamData);
@@ -277,7 +337,7 @@ const NewServicesManagementTab = () => {
         giaTriTu: parseFloat(newStartValue),
         giaTriDen: newEndValue ? parseFloat(newEndValue) : 999999,
         donGia: parseFloat(newUnitPrice),
-        cauHinh: { id: selectedConfig.id }
+        cauHinhDichVu: { id: selectedConfig.id }
       };
 
       const response = await axios.put(`http://localhost:8080/api/thamsophi/${selectedFeeParam.id}`, updatedFeeParamData);
@@ -314,6 +374,8 @@ const NewServicesManagementTab = () => {
       setShowFeeParamModal(false);
     } catch (error) {
       console.error('Error deleting fee parameter:', error);
+      setErrorMessage(error.response?.data || 'Lỗi khi xóa tham số phí');
+      setTimeout(() => setErrorMessage(''), 3000);
     }
   };
 
@@ -389,6 +451,8 @@ const NewServicesManagementTab = () => {
       });
     } catch (error) {
       console.error('Error deleting service package:', error);
+      setErrorMessage(error.response?.data || 'Lỗi khi xóa gói cước');
+      setTimeout(() => setErrorMessage(''), 3000);
     }
   };
 
@@ -442,7 +506,7 @@ const NewServicesManagementTab = () => {
     if (config) {
       setSelectedConfig(config);
       setNewConfig(config.tenCauHinh);
-      setNewDateEffective(config.ngayHieuLuc.split('T')[0]); // Format date for input
+      setNewDateEffective(config.ngayHieuLuc); // Format date for input
     } else {
       setSelectedConfig(null);
       setNewConfig('');
@@ -469,6 +533,13 @@ const NewServicesManagementTab = () => {
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <h2 className="text-xl font-semibold text-gray-800">Quản lý Dịch vụ</h2>
+
+      {/* Error Message Display */}
+      {errorMessage && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-md shadow-md z-50">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Button to open Add Service Modal */}
       <button
@@ -501,12 +572,18 @@ const NewServicesManagementTab = () => {
                 <td className="border px-4 py-2">{service.donViTinh}</td>
                 <td className="border px-4 py-2">{service.moTa}</td>
                 <td className="border px-4 py-2">{service.loaiTinhPhi}</td>
-                <td className="border px-4 py-2">{service.batBuoc === 1 ? 'Bắt Buộc' : 'Không Bắt Buộc'}</td>
+                <td className="border px-4 py-2">{service.batBuoc ? 'Có' : 'Không'}</td>
                 <td className="border px-4 py-2">{service.trangThai}</td>
                 <td className="border px-4 py-2">
                   <button
+                    onClick={() => handleViewService(service.maDichVu)}
+                    className="bg-blue-500 text-white p-1 rounded-md"
+                  >
+                    Xem
+                  </button>
+                  <button
                     onClick={() => openModal(service)}
-                    className="bg-yellow-500 text-white p-1 rounded-md"
+                    className="ml-2 bg-yellow-500 text-white p-1 rounded-md"
                   >
                     Sửa
                   </button>
@@ -516,12 +593,6 @@ const NewServicesManagementTab = () => {
                   >
                     Xóa
                   </button>
-                  <button
-                    onClick={() => handleViewService(service.maDichVu)}
-                    className="ml-2 bg-green-500 text-white p-1 rounded-md"
-                  >
-                    Xem
-                  </button>
                 </td>
               </tr>
             ))}
@@ -529,29 +600,26 @@ const NewServicesManagementTab = () => {
         </table>
       </div>
 
-      {/* View Service Details Modal */}
+      {/* Service Details Modal */}
       {serviceDetails && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-md shadow-lg w-3/4 max-h-[80vh] overflow-auto relative">
+          <div className="bg-white p-6 rounded-md shadow-lg w-3/4 max-h-screen overflow-y-auto relative">
             <button
-              onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-500 text-xl"
+              onClick={() => setServiceDetails(null)}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
             >
-              ×
+              &times;
             </button>
-
-            <h3 className="text-lg font-semibold mb-4">Thông Tin Dịch Vụ</h3>
-
-            {/* Service Information */}
-            <div className="mb-4">
-              <strong>Tên Dịch Vụ:</strong> {serviceDetails.service.tenDichVu}
-            </div>
-            <div className="mb-4">
-              <strong>Mô Tả:</strong> {serviceDetails.service.moTa}
-            </div>
+            <h3 className="text-lg font-semibold mb-4">Chi tiết dịch vụ: {serviceDetails.service.tenDichVu}</h3>
+            <p><strong>Mã Dịch Vụ:</strong> {serviceDetails.service.maDichVu}</p>
+            <p><strong>Đơn Vị Tính:</strong> {serviceDetails.service.donViTinh}</p>
+            <p><strong>Mô Tả:</strong> {serviceDetails.service.moTa}</p>
+            <p><strong>Loại Tính Phí:</strong> {serviceDetails.service.loaiTinhPhi}</p>
+            <p><strong>Bắt Buộc:</strong> {serviceDetails.service.batBuoc ? 'Có' : 'Không'}</p>
+            <p><strong>Trạng Thái:</strong> {serviceDetails.service.trangThai}</p>
 
             {/* Configurations Table */}
-            <h4 className="mt-4 font-semibold">Cấu Hình Dịch Vụ</h4>
+            <h4 className="mt-4 font-semibold">Cấu Hình</h4>
             <button
               className="bg-blue-500 text-white p-2 rounded-md mt-4"
               onClick={() => openConfigModal()}
@@ -715,7 +783,13 @@ const NewServicesManagementTab = () => {
       {/* Modal for Adding/Editing Service */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50">
-          <div className="bg-white p-6 rounded-md shadow-lg w-96">
+          <div className="bg-white p-6 rounded-md shadow-lg w-96 relative">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              &times;
+            </button>
             <h3 className="text-lg font-semibold mb-4">{editingService ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ'}</h3>
             <input
               type="text"
@@ -784,7 +858,13 @@ const NewServicesManagementTab = () => {
       {/* Configuration Modal */}
       {showConfigModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-md shadow-lg w-96">
+          <div className="bg-white p-6 rounded-md shadow-lg w-96 relative">
+            <button
+              onClick={() => setShowConfigModal(false)}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              &times;
+            </button>
             <h3 className="text-lg font-semibold mb-4">{selectedConfig ? 'Chỉnh sửa cấu hình' : 'Thêm cấu hình'}</h3>
             <input
               type="text"
@@ -822,7 +902,21 @@ const NewServicesManagementTab = () => {
       {/* Fee Parameter Modal */}
       {showFeeParamModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-md shadow-lg w-96">
+          <div className="bg-white p-6 rounded-md shadow-lg w-96 relative">
+            <button
+              onClick={() => {
+                setShowFeeParamModal(false);
+                setSelectedConfig(null);
+                setNewFeeParam('');
+                setNewStartValue('');
+                setNewEndValue('');
+                setNewUnitPrice('');
+                setSelectedFeeParam(null);
+              }}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              &times;
+            </button>
             <h3 className="text-lg font-semibold mb-4">{selectedFeeParam ? 'Chỉnh sửa tham số phí' : 'Thêm tham số phí'}</h3>
 
             {/* Dropdown for selecting Configuration */}
@@ -903,7 +997,17 @@ const NewServicesManagementTab = () => {
       {/* Service Package Modal */}
       {showPackageModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-md shadow-lg w-96">
+          <div className="bg-white p-6 rounded-md shadow-lg w-96 relative">
+            <button
+              onClick={() => {
+                setShowPackageModal(false);
+                resetPackageForm();
+                setSelectedPackage(null);
+              }}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              &times;
+            </button>
             <h3 className="text-lg font-semibold mb-4">{selectedPackage ? 'Chỉnh sửa gói cước' : 'Thêm gói cước'}</h3>
             <input
               type="text"

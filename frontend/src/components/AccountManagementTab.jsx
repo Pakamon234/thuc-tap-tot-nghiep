@@ -148,7 +148,7 @@ const AccountManagementTab = () => {
             setCreateError('Email không hợp lệ. Chỉ chấp nhận @gmail.com');
             return false;
         }
-        if (!createForm.canHoId) {
+        if (!createForm.canHoId || createForm.canHoId === '') {
             setCreateError('Vui lòng chọn căn hộ.');
             return false;
         }
@@ -385,8 +385,8 @@ const AccountManagementTab = () => {
                             <div>
                                 <label className="text-sm font-medium text-gray-700">Căn hộ</label>
                                 <select
-                                    value={createForm.maCanHo}
-                                    onChange={(e) => setCreateForm({ ...createForm, maCanHo: e.target.value })}
+                                    value={createForm.canHoId}
+                                    onChange={(e) => setCreateForm({ ...createForm, canHoId: e.target.value })}
                                     className="mt-1 w-full border rounded-lg px-3 py-2"
                                     required
                                 >
